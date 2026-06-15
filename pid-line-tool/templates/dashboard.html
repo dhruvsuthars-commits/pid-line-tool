@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Results — {{ filename }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="dashboard">
+
+  <div class="dash-header">
+    <div>
+      <h1>P&ID Line Segregation Results</h1>
+      <p class="sub">{{ filename }}</p>
+    </div>
+    <div class="header-actions">
+      <a href="/download/{{ outfile }}"
+         class="btn-dl">⬇ Download Excel</a>
+      <a href="/" class="btn-back">← New Upload</a>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total lines</div>
+      <div class="stat-val">{{ total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique fluids</div>
+      <div class="stat-val blue">{{ unique_fluids }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique sizes</div>
+      <div class="stat-val green">{{ unique_sizes }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">With insulation</div>
+      <div class="stat-val amber">{{ with_ins }}</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Lines by fluid code</h3>
+      <canvas id="fluidChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Lines by pipe size (mm)</h3>
+      <canvas id="sizeChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Data table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Segregated data <span class="badge">
+        showing first 50 rows</span></h3>
+      <input type="text" id="search"
+             placeholder="Search..."
+             oninput="filterTable(this.value)">
+    </div>
+    <div class="tbl-wrap">
+    <table id="data-table">
+      <thead><tr>
+        {% for col in cols %}
+        <th class="{% if col in parsed_cols %}parsed{% endif %}">
+          {{ col }}
+        </th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for col in cols %}
+          <td class="{% if col in parsed_cols %}parsed{% endif %}">
+            {{ row[col] }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+</div>
+<script>
+const fluids = {{ fluids | tojson }};
+const sizes  = {{ sizes  | tojson }};
+const COLORS = ['#378ADD','#1D9E75','#EF9F27',
+  '#D85A30','#7F77DD','#D4537E','#639922','#E24B4A'];
+
+new Chart(document.getElementById('fluidChart'),{
+  type:'bar',
+  data:{labels:Object.keys(fluids),
+    datasets:[{data:Object.values(fluids),
+      backgroundColor:COLORS,borderRadius:6}]},
+  options:{plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+});
+new Chart(document.getElementById('sizeChart'),{
+  type:'doughnut',
+  data:{labels:Object.keys(sizes).map(s=>s+' mm'),
+    datasets:[{data:Object.values(sizes),
+      backgroundColor:COLORS}]},
+  options:{plugins:{legend:{position:'right'}}}
+});
+
+function filterTable(q){
+  q=q.toLowerCase();
+  document.querySelectorAll('#data-table tbody tr')
+    .forEach(r=>{
+      r.style.display=
+        r.textContent.toLowerCase().includes(q)
+        ?'':' none';
+    });
+}
+</script>
+</body>
+</html>

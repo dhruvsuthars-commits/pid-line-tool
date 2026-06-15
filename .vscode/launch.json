@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Run app.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/pid-line-tool/app.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/pid-line-tool",
+      "justMyCode": true
+    }
+  ]
+}

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>P&ID Line List Segregator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a12;
+      --surface:#12121e;
+      --card:#1a1a2e;
+      --card2:#16213e;
+      --violet:#7c3aed;
+      --violet-l:#a78bfa;
+      --pink:#ec4899;
+      --pink-l:#f9a8d4;
+      --cyan:#06b6d4;
+      --cyan-l:#67e8f9;
+      --lime:#84cc16;
+      --lime-l:#bef264;
+      --amber:#f59e0b;
+      --amber-l:#fcd34d;
+      --text:#f1f5f9;
+      --muted:#64748b;
+      --muted2:#94a3b8;
+      --border:rgba(255,255,255,0.07);
+      --border2:rgba(255,255,255,0.14);
+      --mono:'Space Mono',monospace;
+      --sans:'Space Grotesk',sans-serif;
+    }
+    html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+
+    /* ANIMATED BG BLOBS */
+    .blob-layer{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.18;animation:drift 12s ease-in-out infinite alternate}
+    .blob1{width:500px;height:500px;background:var(--violet);top:-100px;left:-100px;animation-delay:0s}
+    .blob2{width:400px;height:400px;background:var(--pink);top:30%;right:-80px;animation-delay:-4s}
+    .blob3{width:350px;height:350px;background:var(--cyan);bottom:-80px;left:30%;animation-delay:-8s}
+    @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,30px) scale(1.1)}}
+
+    /* VIEWS */
+    .view{position:relative;z-index:1;display:none}
+    .view.active{display:block}
+    #view-index.active{display:flex;flex-direction:column;min-height:100vh}
+
+    /* ── NAV ── */
+    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border)}
+    .nav-logo{display:flex;align-items:center;gap:10px}
+    .logo-mark{width:32px;height:32px;border-radius:8px;background:var(--violet);display:flex;align-items:center;justify-content:center}
+    .logo-mark svg{width:18px;height:18px}
+    .logo-text{font-weight:700;font-size:15px;letter-spacing:-0.3px}
+    .logo-text span{color:var(--violet-l)}
+    .nav-pill{background:rgba(124,58,237,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-family:var(--mono);color:var(--violet-l);letter-spacing:1px}
+
+    /* ── HERO ── */
+    .hero{flex:1;padding:60px 48px 80px;display:grid;grid-template-columns:1fr 1fr;gap:80px;max-width:1200px;margin:0 auto;width:100%;align-items:start}
+
+    .hero-left{}
+    .hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:6px 14px;font-size:12px;font-family:var(--mono);color:var(--cyan-l);margin-bottom:28px;letter-spacing:0.5px}
+    .tag-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:blink 1.5s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+    h1{font-size:52px;font-weight:700;line-height:1.05;letter-spacing:-2px;margin-bottom:20px}
+    h1 .w1{color:var(--text)}
+    h1 .w2{color:var(--violet-l)}
+    h1 .w3{color:var(--pink-l)}
+    .hero-desc{font-size:15px;color:var(--muted2);line-height:1.7;max-width:460px;margin-bottom:36px}
+
+    /* Feature pills row */
+    .features{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:40px}
+    .feat{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid}
+    .feat-v{background:rgba(124,58,237,0.12);border-color:rgba(167,139,250,0.25);color:var(--violet-l)}
+    .feat-c{background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.25);color:var(--cyan-l)}
+    .feat-p{background:rgba(236,72,153,0.1);border-color:rgba(249,168,212,0.25);color:var(--pink-l)}
+    .feat-g{background:rgba(132,204,22,0.1);border-color:rgba(190,242,100,0.25);color:var(--lime-l)}
+    .feat-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+    .fd-v{background:var(--violet-l)}.fd-c{background:var(--cyan)}.fd-p{background:var(--pink)}.fd-g{background:var(--lime)}
+
+    /* LINE tag visualizer */
+    .line-demo{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:24px;margin-bottom:36px}
+    .line-demo-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:16px;text-transform:uppercase}
+    .line-tag{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:18px}
+    .line-parts{display:flex;gap:8px;flex-wrap:wrap}
+    .part{padding:6px 12px;border-radius:6px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px}
+    .p-fluid{background:rgba(124,58,237,0.2);border:1px solid rgba(167,139,250,0.4);color:var(--violet-l)}
+    .p-seq{background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.35);color:var(--cyan-l)}
+    .p-size{background:rgba(236,72,153,0.15);border:1px solid rgba(249,168,212,0.3);color:var(--pink-l)}
+    .p-class{background:rgba(132,204,22,0.12);border:1px solid rgba(190,242,100,0.3);color:var(--lime-l)}
+    .p-ins{background:rgba(245,158,11,0.12);border:1px solid rgba(252,211,77,0.3);color:var(--amber-l)}
+    .part-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:3px;text-align:center}
+
+    /* ── RIGHT PANEL: upload stack ── */
+    .hero-right{display:flex;flex-direction:column;gap:16px;padding-top:8px}
+
+    .ucard{border-radius:16px;border:1px solid var(--border2);padding:22px 24px;position:relative;overflow:hidden;transition:border-color 0.2s}
+    .ucard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .ucard-1{background:var(--card)}.ucard-1::before{background:linear-gradient(90deg,var(--violet),var(--cyan))}
+    .ucard-2{background:var(--card2)}.ucard-2::before{background:linear-gradient(90deg,var(--pink),var(--amber))}
+    .ucard:hover{border-color:rgba(255,255,255,0.18)}
+
+    .ucard-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .step-badge{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0}
+    .sb-1{background:rgba(124,58,237,0.25);color:var(--violet-l)}
+    .sb-2{background:rgba(236,72,153,0.25);color:var(--pink-l)}
+    .ucard-title{font-size:14px;font-weight:600;color:var(--text)}
+    .status-badge{margin-left:auto;font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:5px;letter-spacing:0.5px}
+    .sb-warn{background:rgba(245,158,11,0.15);color:var(--amber-l);border:1px solid rgba(245,158,11,0.25)}
+    .sb-ok{background:rgba(132,204,22,0.15);color:var(--lime-l);border:1px solid rgba(132,204,22,0.25)}
+
+    .ucard p{font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:14px}
+    code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;color:var(--cyan-l)}
+
+    .dropzone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(0,0,0,0.2)}
+    .dropzone:hover,.dropzone.drag-over{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.06)}
+    .dropzone svg{margin-bottom:6px;opacity:0.5}
+    .dropzone .dz-hint{font-size:12px;color:var(--muted);margin-bottom:2px}
+    .dz-name{font-family:var(--mono);font-size:11px;color:var(--violet-l);margin-top:6px;min-height:16px}
+
+    .card-actions{display:flex;gap:10px;margin-top:14px;align-items:center}
+
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:10px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;background:var(--violet);color:#fff}
+    .btn-primary:hover{background:#6d28d9}
+    .btn-primary:active{transform:scale(0.97)}
+    .btn-primary:disabled{background:rgba(124,58,237,0.3);color:rgba(255,255,255,0.4);cursor:not-allowed}
+    .btn-primary.pink{background:var(--pink)}.btn-primary.pink:hover{background:#db2777}
+
+    .btn-outline{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;background:transparent;color:var(--muted2);border:1px solid var(--border2);font-family:var(--sans);transition:all 0.15s}
+    .btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,0.25)}
+
+    .smsg{font-family:var(--mono);font-size:11px;padding:7px 11px;border-radius:7px;margin-top:10px}
+    .smsg-ok{background:rgba(132,204,22,0.1);color:var(--lime-l);border:1px solid rgba(132,204,22,0.2)}
+    .smsg-err{background:rgba(239,68,68,0.1);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
+    .smsg-info{background:rgba(6,182,212,0.1);color:var(--cyan-l);border:1px solid rgba(6,182,212,0.2)}
+    .smsg-warn{background:rgba(245,158,11,0.1);color:var(--amber-l);border:1px solid rgba(245,158,11,0.2)}
+
+    /* ══ PROCESSING SCREEN ══ */
+    #view-proc{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;gap:32px;padding:40px}
+    #view-proc.active{display:flex}
+    .proc-icon{width:80px;height:80px;border-radius:24px;background:rgba(124,58,237,0.2);border:2px solid rgba(167,139,250,0.4);display:flex;align-items:center;justify-content:center;animation:spin-slow 3s linear infinite}
+    @keyframes spin-slow{to{transform:rotate(360deg)}}
+    .proc-title{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+    .proc-step{font-family:var(--mono);font-size:13px;color:var(--muted2)}
+    .proc-bar-wrap{width:320px;height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+    .proc-bar{height:100%;background:linear-gradient(90deg,var(--violet),var(--cyan));width:0%;transition:width 0.5s ease;border-radius:2px}
+    .proc-pct{font-family:var(--mono);font-size:13px;color:var(--violet-l)}
+
+    /* ══ DASHBOARD ══ */
+    #view-dashboard{min-height:100vh}
+
+    .dash-nav{display:flex;align-items:center;gap:16px;padding:14px 40px;border-bottom:1px solid var(--border);background:rgba(10,10,18,0.9);position:sticky;top:0;z-index:50}
+    .dash-logo{font-weight:700;font-size:14px;letter-spacing:-0.3px;color:var(--text)}
+    .dash-logo span{color:var(--violet-l)}
+    .dash-sep{color:var(--muted);font-size:16px}
+    .dash-crumb{font-family:var(--mono);font-size:11px;color:var(--muted2)}
+    .dash-spacer{flex:1}
+    .btn-back{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-size:12px;cursor:pointer;background:transparent;color:var(--muted2);border:1px solid var(--border2);font-family:var(--sans);transition:all 0.15s}
+    .btn-back:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+    .btn-dl{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(132,204,22,0.15);color:var(--lime-l);border:1px solid rgba(132,204,22,0.3);text-decoration:none;transition:all 0.15s;font-family:var(--sans)}
+    .btn-dl:hover{background:rgba(132,204,22,0.25)}
+    .btn-dl:disabled{opacity:0.5;cursor:not-allowed}
+
+    .dash-body{padding:36px 40px;max-width:1300px;margin:0 auto}
+
+    /* Rainbow stat cards */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+    .scard{border-radius:14px;padding:22px 24px;border:1px solid;position:relative;overflow:hidden}
+    .scard::after{content:attr(data-label);position:absolute;bottom:-8px;right:12px;font-size:60px;font-weight:700;opacity:0.05;font-family:var(--mono);line-height:1}
+    .sc1{background:rgba(124,58,237,0.1);border-color:rgba(167,139,250,0.2)}
+    .sc2{background:rgba(6,182,212,0.08);border-color:rgba(6,182,212,0.2)}
+    .sc3{background:rgba(236,72,153,0.08);border-color:rgba(249,168,212,0.2)}
+    .sc4{background:rgba(132,204,22,0.08);border-color:rgba(190,242,100,0.2)}
+    .scard-label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+    .sc1 .scard-label{color:var(--violet-l)}.sc2 .scard-label{color:var(--cyan-l)}
+    .sc3 .scard-label{color:var(--pink-l)}.sc4 .scard-label{color:var(--lime-l)}
+    .scard-num{font-size:36px;font-weight:700;font-family:var(--mono);line-height:1;margin-bottom:4px}
+    .sc1 .scard-num{color:var(--violet-l)}.sc2 .scard-num{color:var(--cyan)}.sc3 .scard-num{color:var(--pink)}.sc4 .scard-num{color:var(--lime)}
+    .scard-sub{font-size:12px;color:var(--muted)}
+
+    /* Dashboard grid: chart + table */
+    .dash-grid{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+
+    /* Sidebar breakdown */
+    .breakdown-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:22px;position:sticky;top:80px}
+    .bk-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+    .bk-section{margin-bottom:20px}
+    .bk-section-title{font-size:11px;color:var(--muted2);margin-bottom:10px;font-weight:500}
+    .bk-bar-row{margin-bottom:10px}
+    .bk-bar-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;margin-bottom:4px}
+    .bk-bar-key{color:var(--text)}.bk-bar-val{color:var(--muted)}
+    .bk-track{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+    .bk-fill{height:100%;border-radius:2px;transition:width 0.8s ease}
+    .bk-fill-v{background:var(--violet-l)}.bk-fill-c{background:var(--cyan)}.bk-fill-p{background:var(--pink)}.bk-fill-g{background:var(--lime)}.bk-fill-a{background:var(--amber)}
+    .fills{--fills:var(--violet-l),var(--cyan),var(--pink),var(--lime),var(--amber),var(--violet)}
+
+    /* Table card */
+    .table-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
+    .table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+    .tt-title{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)}
+    .tt-search{background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-family:var(--mono);font-size:12px;color:var(--text);width:200px;outline:none;transition:border-color 0.2s}
+    .tt-search::placeholder{color:var(--muted)}
+    .tt-search:focus{border-color:rgba(124,58,237,0.6)}
+    .table-wrap{overflow-x:auto;max-height:440px;overflow-y:auto}
+    .table-wrap::-webkit-scrollbar{width:4px;height:4px}
+    .table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+    table.dt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+    table.dt thead th{background:var(--surface);color:var(--muted2);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    table.dt tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.1s}
+    table.dt tbody tr:hover{background:rgba(255,255,255,0.02)}
+    table.dt tbody tr:last-child{border-bottom:none}
+    table.dt td{padding:9px 14px;color:var(--muted2)}
+    table.dt td:first-child{color:var(--text)}
+    .chip{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:4px;letter-spacing:0.5px;font-weight:700}
+    .chip-v{background:rgba(124,58,237,0.2);color:var(--violet-l)}
+    .chip-c{background:rgba(6,182,212,0.15);color:var(--cyan-l)}
+    .chip-p{background:rgba(236,72,153,0.15);color:var(--pink-l)}
+    .chip-g{background:rgba(132,204,22,0.12);color:var(--lime-l)}
+    .chip-a{background:rgba(245,158,11,0.12);color:var(--amber-l)}
+    .chip-empty{background:rgba(255,255,255,0.04);color:var(--muted)}
+
+    @media(max-width:960px){
+      nav,.hero{padding:16px 20px}
+      .hero{grid-template-columns:1fr;gap:36px}
+      h1{font-size:36px}
+      .stats-row{grid-template-columns:repeat(2,1fr)}
+      .dash-grid{grid-template-columns:1fr}
+      .breakdown-card{position:static}
+      .dash-body{padding:20px}
+    }
+  </style>
+</head>
+<body>
+<div class="blob-layer">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+</div>
+
+<!-- ══ INDEX ══ -->
+<div id="view-index" class="view active">
+  <nav>
+    <div class="nav-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="9" cy="9" r="7"/><path d="M5 9h8M9 5v8"/>
+        </svg>
+      </div>
+      <div class="logo-text">P&amp;ID <span>Segregator</span></div>
+    </div>
+    <div class="nav-pill">● AUTOCAD PROCESSOR</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-tag"><span class="tag-dot"></span> Line list intelligence</div>
+      <h1>
+        <span class="w1">Parse. Map.</span><br>
+        <span class="w2">Segregate.</span><br>
+        <span class="w3">Export.</span>
+      </h1>
+      <p class="hero-desc">
+        Drop your AutoCAD export and watch every LINE tag get split into
+        Fluid Code, Sequence No, Line Size, Pipe Class, and Insulation —
+        then injected directly into your Linelist_reference template.
+      </p>
+
+      <div class="features">
+        <div class="feat feat-v"><span class="feat-dot fd-v"></span>AUTO-PARSED LINE TAGS</div>
+        <div class="feat feat-c"><span class="feat-dot fd-c"></span>TEMPLATE INJECTION</div>
+        <div class="feat feat-p"><span class="feat-dot fd-p"></span>ROW-7 HEADER SAFE</div>
+        <div class="feat feat-g"><span class="feat-dot fd-g"></span>INSTANT DOWNLOAD</div>
+      </div>
+
+      <div class="line-demo">
+        <div class="line-demo-label">Example LINE tag → parsed fields</div>
+        <div class="line-tag" id="demoTag">HPS-120816-50-A5-H</div>
+        <div class="line-parts">
+          <div>
+            <div class="part p-fluid" id="d-fluid">HPS</div>
+            <div class="part-sub">FLUID CODE</div>
+          </div>
+          <div>
+            <div class="part p-seq" id="d-seq">120816</div>
+            <div class="part-sub">SEQUENCE NO</div>
+          </div>
+          <div>
+            <div class="part p-size" id="d-size">50mm</div>
+            <div class="part-sub">LINE SIZE</div>
+          </div>
+          <div>
+            <div class="part p-class" id="d-class">A5</div>
+            <div class="part-sub">PIPE CLASS</div>
+          </div>
+          <div>
+            <div class="part p-ins" id="d-ins">H</div>
+            <div class="part-sub">INSULATION</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <!-- Template card -->
+      <div class="ucard ucard-1">
+        <div class="ucard-head">
+          <div class="step-badge sb-1">01</div>
+          <div class="ucard-title">Upload Linelist Template</div>
+          <div class="status-badge sb-warn" id="tplBadge">NO FILE</div>
+        </div>
+        <p>Upload your <code>Linelist_reference.xls/.xlsx</code> once. Rows 1–6 are preserved; data writes from row 7 downward.</p>
+        <div class="dropzone" id="tplZone" onclick="document.getElementById('tplInp').click()"
+          ondragover="onDragOver(event,'tplZone')" ondragleave="onDragLeave('tplZone')"
+          ondrop="onDrop(event,'tplInp','tplZone','tplName')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--violet-l)" stroke-width="1.8" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="dz-hint">Drag &amp; drop or click to browse</p>
+          <div class="dz-name" id="tplName">No file selected</div>
+        </div>
+        <input type="file" id="tplInp" accept=".xlsx,.xls" style="display:none" onchange="onTplSelected(this)"/>
+        <div class="card-actions">
+          <button class="btn-outline" onclick="saveTpl()">Save template</button>
+        </div>
+        <div id="tplStatus"></div>
+      </div>
+
+      <!-- Line list card -->
+      <div class="ucard ucard-2">
+        <div class="ucard-head">
+          <div class="step-badge sb-2">02</div>
+          <div class="ucard-title">Upload AutoCAD Export</div>
+        </div>
+        <p>Your <code>.xlsx</code> file must contain a <code>LINE</code> column. Format: <code>FluidCode-SeqNo-Size-Class-Insulation</code></p>
+        <div class="dropzone" id="lineZone" onclick="document.getElementById('lineInp').click()"
+          ondragover="onDragOver(event,'lineZone')" ondragleave="onDragLeave('lineZone')"
+          ondrop="onDrop(event,'lineInp','lineZone','lineName')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pink-l)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+          <p class="dz-hint">Drag &amp; drop or click to browse</p>
+          <div class="dz-name" id="lineName">No file selected</div>
+        </div>
+        <input type="file" id="lineInp" accept=".xlsx" style="display:none" onchange="onLineSelected(this)"/>
+        <div class="card-actions">
+          <button class="btn-primary pink" id="btnProcess" disabled onclick="doProcess()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Parse &amp; Export
+          </button>
+          <button class="btn-outline" onclick="resetAll()">Clear</button>
+        </div>
+        <div id="lineStatus"></div>
+      </div>
+
+      <!-- Multiple files card -->
+      <div class="ucard ucard-2">
+        <div class="ucard-head">
+          <div class="step-badge sb-2">02</div>
+          <div class="ucard-title">Upload Multiple Files</div>
+        </div>
+        <p>Upload <strong>multiple</strong> <code>.xlsx</code> files to merge them into a single output. All files must contain a <code>LINE</code> column.</p>
+        <div class="dropzone" id="multiZone" onclick="document.getElementById('multiInp').click()"
+          ondragover="onDragOver(event,'multiZone')" ondragleave="onDragLeave('multiZone')"
+          ondrop="onDropMulti(event,'multiInp','multiZone','multiName')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pink-l)" stroke-width="1.8" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p class="dz-hint">Drag &amp; drop multiple files or click to browse</p>
+          <div class="dz-name" id="multiName">No files selected</div>
+        </div>
+        <input type="file" id="multiInp" accept=".xlsx,.xls" multiple style="display:none" onchange="onMultiSelected(this)"/>
+        <div class="card-actions">
+          <button class="btn-primary pink" id="btnProcessMulti" disabled onclick="doProcessMultiple()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Merge &amp; Export
+          </button>
+          <button class="btn-outline" onclick="resetMulti()">Clear</button>
+        </div>
+        <div id="multiStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROCESSING ══ -->
+<div id="view-proc" class="view">
+  <div class="proc-icon">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--violet-l)" stroke-width="1.8" stroke-linecap="round">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    </svg>
+  </div>
+  <div class="proc-title" id="procTitle">Processing…</div>
+  <div class="proc-step" id="procStep">Reading file</div>
+  <div class="proc-bar-wrap"><div class="proc-bar" id="procBar"></div></div>
+  <div class="proc-pct" id="procPct">0%</div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="view-dashboard" class="view">
+  <nav class="dash-nav">
+    <div class="dash-logo">P&amp;ID <span>Seg</span></div>
+    <div class="dash-sep">/</div>
+    <div class="dash-crumb" id="dashCrumb">Results</div>
+    <div class="dash-spacer"></div>
+    <button class="btn-back" onclick="goBack()">← New file</button>
+    <button class="btn-dl" id="dlBtn" onclick="downloadWithMN()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span id="dlBtnLabel">Download Excel</span>
+    </button>
+  </nav>
+
+  <div class="dash-body">
+    <div class="stats-row">
+      <div class="scard sc1" data-label="#">
+        <div class="scard-label">Rows parsed</div>
+        <div class="scard-num" id="sc-rows">—</div>
+        <div class="scard-sub">Total line entries</div>
+      </div>
+      <div class="scard sc2" data-label="~">
+        <div class="scard-label">Fluid codes</div>
+        <div class="scard-num" id="sc-fluids">—</div>
+        <div class="scard-sub">Unique identifiers</div>
+      </div>
+      <div class="scard sc3" data-label="∅">
+        <div class="scard-label">Pipe classes</div>
+        <div class="scard-num" id="sc-classes">—</div>
+        <div class="scard-sub">Spec categories</div>
+      </div>
+      <div class="scard sc4" data-label="⌀">
+        <div class="scard-label">Line sizes</div>
+        <div class="scard-num" id="sc-sizes">—</div>
+        <div class="scard-sub">Unique diameters</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="breakdown-card">
+        <div class="bk-title">Breakdown</div>
+        <div class="bk-section">
+          <div class="bk-section-title">Fluid code frequency</div>
+          <div id="fluidBars"></div>
+        </div>
+        <div class="bk-section">
+          <div class="bk-section-title">Pipe class frequency</div>
+          <div id="classBars"></div>
+        </div>
+        <div class="bk-section">
+          <div class="bk-section-title">Set Nor.Op. Pressure (M) & Temp (N)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center">
+            <select id="mn-fluid" style="padding:7px 8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:12px;width:100%"><option value="">All fluids</option></select>
+            <select id="mn-class" style="padding:7px 8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:12px;width:100%"><option value="">All classes</option></select>
+            <input id="mn-M" placeholder="M (Pressure)" style="padding:7px 8px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;width:100%;box-sizing:border-box" />
+            <input id="mn-N" placeholder="N (Temp)" style="padding:7px 8px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;width:100%;box-sizing:border-box" />
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="btn-outline" onclick="saveMNConfig()">Save M & N</button>
+            <button class="btn-outline" onclick="clearMNConfig()">Clear configs</button>
+          </div>
+          <div id="mnStatus" style="margin-top:8px"></div>
+          <div id="mnConfigsList" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="tt-title">Preview · first 50 rows</div>
+          <input class="tt-search" type="text" placeholder="Filter…" oninput="filterTable(this.value)"/>
+        </div>
+        <div class="table-wrap">
+          <table class="dt">
+            <thead><tr id="tHead"></tr></thead>
+            <tbody id="tBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allRows=[];
+
+const demoLines=[
+  {tag:'HPS-120816-50-A5-H',fluid:'HPS',seq:'120816',size:'50mm',cls:'A5',ins:'H'},
+  {tag:'CWS-240102-80-B2',fluid:'CWS',seq:'240102',size:'80mm',cls:'B2',ins:'—'},
+  {tag:'N1-300450-150-A1-P',fluid:'N1',seq:'300450',size:'150mm',cls:'A1',ins:'P'},
+  {tag:'BPF-101230-25-C3-H',fluid:'BPF',seq:'101230',size:'25mm',cls:'C3',ins:'H'},
+];
+let demoIdx=0;
+setInterval(()=>{
+  demoIdx=(demoIdx+1)%demoLines.length;
+  const d=demoLines[demoIdx];
+  document.getElementById('demoTag').textContent=d.tag;
+  document.getElementById('d-fluid').textContent=d.fluid;
+  document.getElementById('d-seq').textContent=d.seq;
+  document.getElementById('d-size').textContent=d.size;
+  document.getElementById('d-class').textContent=d.cls;
+  document.getElementById('d-ins').textContent=d.ins;
+},2800);
+
+function onDragOver(e,id){e.preventDefault();document.getElementById(id).classList.add('drag-over')}
+function onDragLeave(id){document.getElementById(id).classList.remove('drag-over')}
+function onDrop(e,inp,zone,label){
+  e.preventDefault();onDragLeave(zone);
+  const dt=new DataTransfer();dt.items.add(e.dataTransfer.files[0]);
+  const el=document.getElementById(inp);el.files=dt.files;el.dispatchEvent(new Event('change'));
+}
+function onDropMulti(e,inp,zone,label){
+  e.preventDefault();onDragLeave(zone);
+  const el=document.getElementById(inp);
+  const dt=new DataTransfer();
+  for(let i=0;i<e.dataTransfer.files.length;i++){
+    dt.items.add(e.dataTransfer.files[i]);
+  }
+  el.files=dt.files;
+  el.dispatchEvent(new Event('change'));
+}
+
+function onTplSelected(inp){
+  if(inp.files.length)document.getElementById('tplName').textContent=inp.files[0].name;
+}
+function onLineSelected(inp){
+  if(inp.files.length){
+    document.getElementById('lineName').textContent=inp.files[0].name;
+    document.getElementById('btnProcess').disabled=false;
+  }
+}
+
+function onMultiSelected(inp){
+  if(inp.files.length){
+    document.getElementById('multiName').textContent=inp.files.length+' file(s) selected';
+    document.getElementById('btnProcessMulti').disabled=false;
+  }
+}
+
+async function saveTpl(){
+  const f=document.getElementById('tplInp').files[0];
+  const el=document.getElementById('tplStatus');
+  if(!f){el.innerHTML=smsg('warn','Select a template file first.');return}
+  el.innerHTML=smsg('info','Uploading…');
+  const fd=new FormData();fd.append('template',f);
+  try{
+    const r=await fetch('/upload-template',{method:'POST',body:fd});
+    const d=await r.json();
+    if(r.ok){
+      el.innerHTML=smsg('ok','✓ '+d.message);
+      const b=document.getElementById('tplBadge');
+      b.textContent='READY';b.className='status-badge sb-ok';
+    }else el.innerHTML=smsg('err',d.error);
+  }catch(e){el.innerHTML=smsg('err','Upload failed.')}
+}
+
+async function doProcess(){
+  const f=document.getElementById('lineInp').files[0];
+  if(!f)return;
+  document.getElementById('btnProcess').disabled=true;
+  document.getElementById('lineStatus').innerHTML='';
+  setProc('UPLOADING','Reading your file…',20);
+  showView('proc');
+  const fd=new FormData();fd.append('file',f);
+  try{
+    setTimeout(()=>setProc('PARSING LINES','Splitting LINE tags…',55),600);
+    const r=await fetch('/process',{method:'POST',body:fd});
+    setProc('WRITING TEMPLATE','Injecting data into template…',85);
+    if(!r.ok){
+      let d={};try{d=await r.json()}catch(_){}
+      showView('index');
+      document.getElementById('lineStatus').innerHTML=smsg('err',d.error||'Processing failed.');
+      document.getElementById('btnProcess').disabled=false;
+      return;
+    }
+    const data=await r.json();
+    setProc('COMPLETE','Building dashboard…',100);
+    setTimeout(()=>{populate(data,f.name);showView('dashboard')},500);
+  }catch(e){
+    showView('index');
+    document.getElementById('lineStatus').innerHTML=smsg('err','Network error: '+e.message);
+    document.getElementById('btnProcess').disabled=false;
+  }
+}
+
+async function doProcessMultiple(){
+  const files=document.getElementById('multiInp').files;
+  if(!files||files.length===0)return;
+  document.getElementById('btnProcessMulti').disabled=true;
+  document.getElementById('multiStatus').innerHTML='';
+  setProc('UPLOADING','Reading files…',20);
+  showView('proc');
+  const fd=new FormData();
+  for(let i=0;i<files.length;i++){fd.append('files',files[i])}
+  try{
+    setTimeout(()=>setProc('MERGING FILES','Combining all LINE data…',55),600);
+    const r=await fetch('/process-multiple',{method:'POST',body:fd});
+    setProc('WRITING TEMPLATE','Injecting merged data into template…',85);
+    if(!r.ok){
+      let d={};try{d=await r.json()}catch(_){}
+      showView('index');
+      document.getElementById('multiStatus').innerHTML=smsg('err',d.error||'Processing failed.');
+      document.getElementById('btnProcessMulti').disabled=false;
+      return;
+    }
+    const data=await r.json();
+    setProc('COMPLETE','Building dashboard…',100);
+    setTimeout(()=>{populate(data,files.length+' files merged');showView('dashboard')},500);
+  }catch(e){
+    showView('index');
+    document.getElementById('multiStatus').innerHTML=smsg('err','Network error: '+e.message);
+    document.getElementById('btnProcessMulti').disabled=false;
+  }
+}
+
+function setProc(title,step,pct){
+  document.getElementById('procTitle').textContent=title;
+  document.getElementById('procStep').textContent=step;
+  document.getElementById('procBar').style.width=pct+'%';
+  document.getElementById('procPct').textContent=pct+'%';
+}
+
+function populate(data,fname){
+  allRows=data.preview||[];
+  const rows=data.rows||allRows.length;
+  const fluids=uniq('Fluid Code');
+  const classes=uniq('Pipe Class');
+  const sizes=uniq('Line Size (mm)');
+
+  document.getElementById('dashCrumb').textContent=fname||'output.xlsx';
+  document.getElementById('sc-rows').textContent=rows;
+  document.getElementById('sc-fluids').textContent=fluids.length;
+  document.getElementById('sc-classes').textContent=classes.length;
+  document.getElementById('sc-sizes').textContent=sizes.length;
+
+  const dlBtn=document.getElementById('dlBtn');
+  if(data.download_url) window._lastDownloadUrl=data.download_url;
+  if(data.session_file) window._sessionFile=data.session_file;
+
+  buildBars('fluidBars','Fluid Code');
+  buildBars('classBars','Pipe Class');
+
+  // Populate M&N dropdowns if provided by server
+  const mnFluidSel=document.getElementById('mn-fluid');
+  const mnClassSel=document.getElementById('mn-class');
+  if(mnFluidSel){
+    mnFluidSel.innerHTML='<option value="">All fluids</option>'+( (data.fluid_codes||[]).map(f=>`<option value="${f}">${f}</option>`).join('') );
+  }
+  if(mnClassSel){
+    mnClassSel.innerHTML='<option value="">All classes</option>'+( (data.pipe_classes||[]).map(c=>`<option value="${c}">${c}</option>`).join('') );
+  }
+
+  buildTable(allRows);
+
+  // Load existing configs for display
+  loadMNConfig();
+}
+
+function uniq(col){return[...new Set(allRows.map(r=>r[col]).filter(Boolean))]}
+
+const barColors=['bk-fill-v','bk-fill-c','bk-fill-p','bk-fill-g','bk-fill-a'];
+function buildBars(elId,col){
+  const counts={};
+  allRows.forEach(r=>{const v=r[col];if(v)counts[v]=(counts[v]||0)+1});
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const max=sorted[0]?.[1]||1;
+  const el=document.getElementById(elId);
+  el.innerHTML=sorted.map(([k,v],i)=>`
+    <div class="bk-bar-row">
+      <div class="bk-bar-meta"><span class="bk-bar-key">${k}</span><span class="bk-bar-val">${v}</span></div>
+      <div class="bk-track"><div class="bk-fill ${barColors[i%barColors.length]}" style="width:${Math.round(v/max*100)}%"></div></div>
+    </div>`).join('');
+}
+
+const chipMap={'Fluid Code':'chip-v','Pipe Class':'chip-c','Line Size (mm)':'chip-p','Insulation':'chip-a'};
+function buildTable(rows){
+  if(!rows.length)return;
+  const cols=Object.keys(rows[0]);
+  const thead=document.getElementById('tHead');
+  const tbody=document.getElementById('tBody');
+  thead.innerHTML='';tbody.innerHTML='';
+  cols.forEach(c=>{const th=document.createElement('th');th.textContent=c;thead.appendChild(th)});
+  rows.slice(0,50).forEach(row=>{
+    const tr=document.createElement('tr');
+    cols.forEach(c=>{
+      const td=document.createElement('td');
+      const v=row[c]??'';
+      if(chipMap[c]&&v)td.innerHTML=`<span class="chip ${chipMap[c]}">${v}</span>`;
+      else if(!v||v==='')td.innerHTML=`<span class="chip chip-empty">—</span>`;
+      else td.textContent=v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable(q){
+  const lq=q.toLowerCase();
+  document.querySelectorAll('#tBody tr').forEach(tr=>{
+    tr.style.display=tr.textContent.toLowerCase().includes(lq)?'':'none';
+  });
+}
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goBack(){showView('index');resetAll()}
+function resetAll(){
+  document.getElementById('lineInp').value='';
+  document.getElementById('lineName').textContent='No file selected';
+  document.getElementById('btnProcess').disabled=true;
+  document.getElementById('lineStatus').innerHTML='';
+}
+
+function resetMulti(){
+  document.getElementById('multiInp').value='';
+  document.getElementById('multiName').textContent='No files selected';
+  document.getElementById('btnProcessMulti').disabled=true;
+  document.getElementById('multiStatus').innerHTML='';
+}
+
+function smsg(type,text){
+  const cls={ok:'smsg-ok',err:'smsg-err',info:'smsg-info',warn:'smsg-warn'};
+  return`<div class="smsg ${cls[type]||'smsg-info'}">${text}</div>`;
+}
+
+async function saveMNConfig(){
+  const fluid=document.getElementById('mn-fluid').value||'';
+  const cls=document.getElementById('mn-class').value||'';
+  const m=document.getElementById('mn-M').value||'';
+  const n=document.getElementById('mn-N').value||'';
+  const st=document.getElementById('mnStatus'); st.innerHTML='';
+  if(!m && !n){st.innerHTML=smsg('warn','Provide at least M or N');return}
+  try{
+    const r=await fetch('/save-mn-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fluid_code:fluid,pipe_class:cls,nor_op_pressure:m,nor_op_temp:n})});
+    const d=await r.json();
+    if(r.ok){st.innerHTML=smsg('ok',d.message);loadMNConfig()}else st.innerHTML=smsg('err',d.error||'Save failed');
+  }catch(e){st.innerHTML=smsg('err','Network error')}
+}
+
+async function loadMNConfig(){
+  try{
+    const r=await fetch('/get-mn-config');
+    const d=await r.json();
+    const el=document.getElementById('mnConfigsList');
+    if(!d.configs||!d.configs.length){el.innerHTML='<div class="chip-empty">No M&N configs</div>';return}
+    el.innerHTML=d.configs.map(c=>{
+      const f=c.fluid_code||'Any'; const cl=c.pipe_class||'Any';
+      return `<div style="margin-bottom:6px">${f} · ${cl} → M:${c.nor_op_pressure||'—'} N:${c.nor_op_temp||'—'}</div>`;
+    }).join('');
+  }catch(e){console.warn('Could not load MN configs',e)}
+}
+
+async function clearMNConfig(){
+  try{const r=await fetch('/clear-mn-config',{method:'POST'});if(r.ok){loadMNConfig();document.getElementById('mnStatus').innerHTML=smsg('ok','Cleared') }}catch(e){}
+}
+
+async function downloadWithMN(){
+  const lbl=document.getElementById('dlBtnLabel');
+  const btn=document.getElementById('dlBtn');
+  btn.disabled=true; lbl.textContent='Generating…';
+  try{
+    // Fetch current saved M&N configs first
+    const cfgR=await fetch('/get-mn-config');
+    const cfgD=await cfgR.json();
+    const configs=cfgD.configs||[];
+
+    // Call /export-with-mn — backend re-runs process_file_with_mn with current configs
+    const r=await fetch('/export-with-mn',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        session_file: window._sessionFile||null,
+        configs: configs
+      })
+    });
+    if(!r.ok){
+      let d={};try{d=await r.json()}catch(_){}
+      document.getElementById('mnStatus').innerHTML=smsg('err',d.error||'Export failed');
+      return;
+    }
+    // Stream the file as a download
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='LineList_Segregated.xlsx';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    document.getElementById('mnStatus').innerHTML=smsg('ok','Downloaded with M&N values applied ✓');
+  }catch(e){
+    document.getElementById('mnStatus').innerHTML=smsg('err','Download failed: '+e.message);
+  }finally{
+    btn.disabled=false; lbl.textContent='Download Excel';
+  }
+}
+</script>
+</body>
+</html>
