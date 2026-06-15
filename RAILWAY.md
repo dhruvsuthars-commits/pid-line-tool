@@ -35,3 +35,12 @@ Troubleshooting
 - Check logs in Railway dashboard for errors.
 - Ensure `requirements.txt` is at repo root so buildpack installs dependencies.
 
+GitHub Action: Auto-deploy on push
+1. Create two repository secrets in GitHub: `RAILWAY_API_KEY` and `RAILWAY_PROJECT_ID`.
+   - `RAILWAY_API_KEY`: your Railway API key (from account settings).
+   - `RAILWAY_PROJECT_ID`: the Railway project id (found in the project settings).
+2. A GitHub Action workflow `.github/workflows/deploy-railway.yml` is included in this repo. It runs on push to `main`.
+3. The workflow installs the Railway CLI, authenticates using `RAILWAY_API_KEY`, then runs `railway up` for the specified `RAILWAY_PROJECT_ID`.
+
+If you prefer to trigger deployments from Railway directly (connect GitHub in Railway), you can skip adding these secrets.
+
