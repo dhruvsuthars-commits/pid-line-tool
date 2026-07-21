@@ -372,6 +372,31 @@
         </div>
         <div id="multiStatus"></div>
       </div>
+
+      <!-- PDF OCR Extraction Tool card -->
+      <div class="ucard ucard-1" style="background:var(--card2); border-color:rgba(6,182,212,0.3)">
+        <div class="ucard-head">
+          <div class="step-badge sb-1" style="background:rgba(6,182,212,0.2); color:var(--cyan-l)">03</div>
+          <div class="ucard-title">Upload P&amp;ID PDF (OCR Tool)</div>
+          <div class="status-badge sb-ok" style="background:rgba(6,182,212,0.15); color:var(--cyan-l); border-color:rgba(6,182,212,0.3)">PDF OCR</div>
+        </div>
+        <p>Upload a <strong>P&amp;ID PDF drawing</strong>. OCR extracts all text, identifies line numbers, categorizes properties, and builds your line list automatically.</p>
+        <div class="dropzone" id="pdfZone" onclick="document.getElementById('pdfInp').click()"
+          ondragover="onDragOver(event,'pdfZone')" ondragleave="onDragLeave('pdfZone')"
+          ondrop="onDrop(event,'pdfInp','pdfZone','pdfName')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cyan-l)" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <p class="dz-hint">Drag &amp; drop PDF or click to browse</p>
+          <div class="dz-name" id="pdfName">No file selected</div>
+        </div>
+        <input type="file" id="pdfInp" accept=".pdf" style="display:none" onchange="onPdfSelected(this)"/>
+        <div class="card-actions">
+          <button class="btn-primary" style="background:var(--cyan)" id="btnProcessPdf" disabled onclick="doProcessPdf()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Scan PDF &amp; Build Line List
+          </button>
+        </div>
+        <div id="pdfStatus"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -389,14 +414,81 @@
   <div class="proc-pct" id="procPct">0%</div>
 </div>
 
+<!-- ══ PDF OCR LINE VERIFICATION SCREEN ══ -->
+<div id="view-pdf-review" class="view" style="min-height:100vh; padding:32px 40px; background:var(--bg)">
+  <div style="max-width:1100px; margin:0 auto">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px">
+      <div>
+        <button class="btn-back" style="margin-bottom:12px" onclick="showView('index')">← Back to Main Menu</button>
+        <div style="font-family:var(--mono); font-size:11px; color:var(--cyan-l); letter-spacing:1px; margin-bottom:6px">● STEP 2: VERIFY &amp; SELECT LINES</div>
+        <h2 style="font-size:26px; font-weight:700">Review OCR Identified Line Numbers</h2>
+        <p style="font-size:13px; color:var(--muted2); margin-top:4px">Select valid lines or deselect unwanted text extracted from the PDF before generating the final line list.</p>
+      </div>
+      <div style="display:flex; gap:12px">
+        <button class="btn-outline" onclick="toggleSelectAllPdfLines(true)">Select All</button>
+        <button class="btn-outline" onclick="toggleSelectAllPdfLines(false)">Deselect All</button>
+        <button class="btn-primary" style="background:var(--lime); color:#000" onclick="submitConfirmedPdfLines()">
+          Confirm Lines &amp; Build Dashboard →
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:24px">
+      <div style="background:var(--card); border:1px solid var(--border2); padding:16px 20px; border-radius:12px">
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:1px">TOTAL OCR CANDIDATES</div>
+        <div id="pdfReviewTotal" style="font-size:24px; font-weight:700; color:var(--cyan-l); margin-top:4px">0</div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border2); padding:16px 20px; border-radius:12px">
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:1px">SELECTED FOR LINE LIST</div>
+        <div id="pdfReviewSelected" style="font-size:24px; font-weight:700; color:var(--lime-l); margin-top:4px">0</div>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border2); padding:16px 20px; border-radius:12px">
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:1px">EXCLUDED UNWANTED TEXT</div>
+        <div id="pdfReviewExcluded" style="font-size:24px; font-weight:700; color:var(--pink-l); margin-top:4px">0</div>
+      </div>
+    </div>
+
+    <!-- Filter & Line Table -->
+    <div style="background:var(--card); border:1px solid var(--border2); border-radius:16px; overflow:hidden">
+      <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between">
+        <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--text)">EXTRACTED LINE CANDIDATES</div>
+        <input type="text" id="pdfReviewSearch" placeholder="Filter line tags..." class="tt-search" oninput="renderPdfLineReviewTable()"/>
+      </div>
+      <div class="table-wrap" style="max-height:480px">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th style="width:40px; text-align:center">Include</th>
+              <th>Page #</th>
+              <th>Extracted / Editable Line Tag</th>
+              <th>Fluid Code</th>
+              <th>Sequence No</th>
+              <th>Line Size</th>
+              <th>Pipe Class</th>
+              <th>Insulation</th>
+              <th style="width:80px; text-align:center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="pdfReviewTableBody">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ══ DASHBOARD ══ -->
 <div id="view-dashboard" class="view">
   <nav class="dash-nav">
-    <div class="dash-logo">P&amp;ID <span>Seg</span></div>
+    <button class="btn-back" onclick="showView('pdf-review')" id="btnBackToReview" style="display:none; margin-right:12px">← Back to Line Review</button>
+    <button class="btn-back" onclick="goBack()">← Back to Main Menu</button>
+    <div class="dash-logo" style="margin-left:16px">P&amp;ID <span>Seg</span></div>
     <div class="dash-sep">/</div>
     <div class="dash-crumb" id="dashCrumb">Results</div>
     <div class="dash-spacer"></div>
-    <button class="btn-back" onclick="goBack()">← New file</button>
     <button class="btn-dl" id="dlBtn" onclick="downloadWithMN()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span id="dlBtnLabel">Download Excel</span>
@@ -603,6 +695,206 @@ async function doProcessMultiple(){
   }
 }
 
+function onPdfSelected(inp){
+  if(inp.files.length){
+    document.getElementById('pdfName').textContent=inp.files[0].name;
+    document.getElementById('btnProcessPdf').disabled=false;
+  }
+}
+
+let pdfExtractedData = [];
+let pdfSelectedSet = new Set();
+let currentPdfBaseName = "";
+let currentPdfFileName = "";
+
+async function doProcessPdf(){
+  const f=document.getElementById('pdfInp').files[0];
+  if(!f)return;
+  document.getElementById('btnProcessPdf').disabled=true;
+  document.getElementById('pdfStatus').innerHTML='';
+  setProc('UPLOADING PDF','Reading PDF drawing…',20);
+  showView('proc');
+  const fd=new FormData();
+  fd.append('pdf_file',f);
+  try{
+    setTimeout(()=>setProc('SCANNING OCR & PARSING','Extracting text & identifying LINE numbers…',60),600);
+    const r=await fetch('/process-pdf',{method:'POST',body:fd});
+    if(!r.ok){
+      let d={};try{d=await r.json()}catch(_){}
+      showView('index');
+      document.getElementById('pdfStatus').innerHTML=smsg('err',d.error||'PDF processing failed.');
+      document.getElementById('btnProcessPdf').disabled=false;
+      return;
+    }
+    const data=await r.json();
+    setProc('COMPLETE','Opening Line Selection Review…',100);
+    
+    // Store extracted lines for user interactive selection
+    pdfExtractedData = data.extracted_lines || [];
+    currentPdfBaseName = data.base_name || "PDF_Extracted";
+    currentPdfFileName = f.name;
+
+    // By default all extracted tags are selected
+    pdfSelectedSet = new Set(pdfExtractedData.map(item => item.LINE));
+
+    setTimeout(()=>{
+      renderPdfLineReviewTable();
+      showView('pdf-review');
+    }, 400);
+  }catch(e){
+    showView('index');
+    document.getElementById('pdfStatus').innerHTML=smsg('err','Network error: '+e.message);
+    document.getElementById('btnProcessPdf').disabled=false;
+  }
+}
+
+function renderPdfLineReviewTable(){
+  const query = (document.getElementById('pdfReviewSearch').value || '').toLowerCase().trim();
+  const tbody = document.getElementById('pdfReviewTableBody');
+  tbody.innerHTML = '';
+
+  let totalCount = pdfExtractedData.length;
+  let selectedCount = 0;
+
+  pdfExtractedData.forEach((item, index) => {
+    const isChecked = item.selected !== false;
+    if(isChecked) selectedCount++;
+
+    const lineText = (item.LINE || '').toLowerCase();
+    if(query && !lineText.includes(query)) return;
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td style="text-align:center">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="togglePdfLineSelectionByIndex(${index}, this.checked)"/>
+      </td>
+      <td><span class="chip chip-c">Pg ${item.page || 1}</span></td>
+      <td>
+        <input type="text" value="${item.LINE.replace(/"/g, '&quot;')}" 
+          id="lineInput_${index}"
+          style="background:rgba(0,0,0,0.5); border:1px solid var(--violet); color:var(--text); padding:6px 10px; border-radius:6px; font-family:var(--mono); font-weight:700; width:220px; font-size:13px; outline:none;"
+          oninput="updatePdfLineTagLive(${index}, this.value)"
+        />
+      </td>
+      <td><span class="chip chip-v" id="fc_${index}">${item["Fluid Code"] || '-'}</span></td>
+      <td id="seq_${index}">${item["Sequence No"] || '-'}</td>
+      <td><span class="chip chip-p" id="sz_${index}">${item["Line Size (mm)"] ? item["Line Size (mm)"] + 'mm' : '-'}</span></td>
+      <td><span class="chip chip-g" id="cls_${index}">${item["Pipe Class"] || '-'}</span></td>
+      <td><span class="chip chip-a" id="ins_${index}">${item["Insulation"] || '-'}</span></td>
+      <td style="text-align:center">
+        <button class="btn-outline" style="padding:4px 10px; font-size:11px; color:var(--cyan-l); border-color:rgba(6,182,212,0.4)" onclick="editPdfLineTagPrompt(${index})">✏ Edit</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('pdfReviewTotal').textContent = totalCount;
+  document.getElementById('pdfReviewSelected').textContent = selectedCount;
+  document.getElementById('pdfReviewExcluded').textContent = totalCount - selectedCount;
+}
+
+function updatePdfLineTagLive(index, newTagValue){
+  const cleanVal = newTagValue.trim();
+  pdfExtractedData[index].LINE = newTagValue;
+
+  // Re-parse properties live
+  const parts = cleanVal.split('-');
+  if (parts.length > 0 && parts[0].match(/^\d+$/) && parts.length >= 4) {
+    pdfExtractedData[index]["Line Size (mm)"] = parts[0];
+    pdfExtractedData[index]["Fluid Code"] = parts[1];
+    pdfExtractedData[index]["Sequence No"] = parts[2];
+    pdfExtractedData[index]["Pipe Class"] = parts[3];
+    pdfExtractedData[index]["Insulation"] = parts[4] || '';
+  } else {
+    pdfExtractedData[index]["Fluid Code"]     = parts[0] || '';
+    pdfExtractedData[index]["Sequence No"]    = parts[1] || '';
+    pdfExtractedData[index]["Line Size (mm)"] = parts[2] || '';
+    pdfExtractedData[index]["Pipe Class"]     = parts[3] || '';
+    pdfExtractedData[index]["Insulation"]     = parts[4] || '';
+  }
+
+  // Update DOM badges dynamically without re-rendering inputs
+  const fc = document.getElementById('fc_' + index);
+  if(fc) fc.textContent = pdfExtractedData[index]["Fluid Code"] || '-';
+
+  const seq = document.getElementById('seq_' + index);
+  if(seq) seq.textContent = pdfExtractedData[index]["Sequence No"] || '-';
+
+  const sz = document.getElementById('sz_' + index);
+  if(sz) sz.textContent = pdfExtractedData[index]["Line Size (mm)"] ? pdfExtractedData[index]["Line Size (mm)"] + 'mm' : '-';
+
+  const cls = document.getElementById('cls_' + index);
+  if(cls) cls.textContent = pdfExtractedData[index]["Pipe Class"] || '-';
+
+  const ins = document.getElementById('ins_' + index);
+  if(ins) ins.textContent = pdfExtractedData[index]["Insulation"] || '-';
+}
+
+function editPdfLineTagPrompt(index){
+  const currentTag = pdfExtractedData[index].LINE;
+  const edited = prompt("Edit Line Tag:", currentTag);
+  if(edited !== null && edited.trim() !== "") {
+    const inp = document.getElementById('lineInput_' + index);
+    if(inp) inp.value = edited.trim();
+    updatePdfLineTagLive(index, edited.trim());
+  }
+}
+
+function togglePdfLineSelectionByIndex(index, isSelected){
+  pdfExtractedData[index].selected = isSelected;
+  let selectedCount = pdfExtractedData.filter(i => i.selected !== false).length;
+  let totalCount = pdfExtractedData.length;
+  document.getElementById('pdfReviewSelected').textContent = selectedCount;
+  document.getElementById('pdfReviewExcluded').textContent = totalCount - selectedCount;
+}
+
+function toggleSelectAllPdfLines(selectState){
+  pdfExtractedData.forEach(item => item.selected = selectState);
+  renderPdfLineReviewTable();
+}
+
+async function submitConfirmedPdfLines(){
+  const selectedItems = pdfExtractedData.filter(item => item.selected !== false);
+  const selectedLinesArr = selectedItems.map(item => item.LINE.trim()).filter(line => line.length > 0);
+
+  if(selectedLinesArr.length === 0){
+    alert("Please select or specify at least one valid line number to proceed.");
+    return;
+  }
+
+  setProc('BUILDING LINE LIST','Injecting selected line numbers into Excel template…',50);
+  showView('proc');
+
+  try {
+    const r = await fetch('/confirm-pdf-lines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        selected_lines: selectedLinesArr,
+        base_name: currentPdfBaseName
+      })
+    });
+
+    if(!r.ok){
+      let d = {}; try{ d = await r.json() } catch(_){}
+      showView('pdf-review');
+      alert("Error building line list: " + (d.error || "Server error"));
+      return;
+    }
+
+    const data = await r.json();
+    setProc('COMPLETE','Rendering Dashboard…',100);
+    setTimeout(() => {
+      populate(data, currentPdfFileName + ' (Verified PDF OCR)');
+      showView('dashboard');
+    }, 400);
+  } catch(e) {
+    showView('pdf-review');
+    alert("Network error: " + e.message);
+  }
+}
+
 function setProc(title,step,pct){
   document.getElementById('procTitle').textContent=title;
   document.getElementById('procStep').textContent=step;
@@ -613,6 +905,13 @@ function setProc(title,step,pct){
 function populate(data,fname){
   allRows=data.preview||[];
   const rows=data.rows||allRows.length;
+  document.getElementById('dashCrumb').textContent=fname;
+
+  // Show Back to Line Review button if this came from PDF OCR mode
+  const btnRev = document.getElementById('btnBackToReview');
+  if(btnRev) {
+    btnRev.style.display = (typeof pdfExtractedData !== 'undefined' && pdfExtractedData && pdfExtractedData.length > 0) ? 'inline-flex' : 'none';
+  }
   const fluids=uniq('Fluid Code');
   const classes=uniq('Pipe Class');
   const sizes=uniq('Line Size (mm)');

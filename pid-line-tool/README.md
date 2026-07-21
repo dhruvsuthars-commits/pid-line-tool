@@ -22,6 +22,17 @@ Then open:
 http://127.0.0.1:5000
 ```
 
+### Configurable port
+
+You can override the port with the `PORT` environment variable.
+
+```powershell
+$env:PORT=5010
+.\venv\Scripts\python.exe .\app.py
+```
+
+If the chosen port is already in use, the app will automatically try the next available port up to `PORT_RANGE_END` (default `5100`).
+
 ## Use the CLI directly
 
 ```powershell

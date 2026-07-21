@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "pid-line-tool/app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/pid-line-tool/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "pid-line-tool/app.py"
+    }
+  ]
+}
