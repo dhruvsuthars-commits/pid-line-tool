@@ -33,9 +33,19 @@ TEMPLATE_PATH   = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
 PORT            = int(os.environ.get("PORT", 5000))
 MAX_PORT        = int(os.environ.get("PORT_RANGE_END", 5100))
 
-os.makedirs(OUTPUT_DIR,      exist_ok=True)
-os.makedirs(TEMPLATES_STORE, exist_ok=True)
-os.makedirs(INPUT_DIR,       exist_ok=True)
+# On Vercel / serverless, write to /tmp directory if read-only filesystem
+if os.environ.get("VERCEL"):
+    OUTPUT_DIR      = "/tmp/output"
+    TEMPLATES_STORE = "/tmp/templates_store"
+    INPUT_DIR       = "/tmp/input_store"
+    TEMPLATE_PATH   = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
+
+try:
+    os.makedirs(OUTPUT_DIR,      exist_ok=True)
+    os.makedirs(TEMPLATES_STORE, exist_ok=True)
+    os.makedirs(INPUT_DIR,       exist_ok=True)
+except Exception:
+    pass
 
 
 # ─────────────────────────────────────────────
