@@ -118,29 +118,41 @@ def extract_lines_with_philosophy(page_texts: list[str], philosophy: str) -> lis
     final_lines = []
 
     for match in all_raw_matches:
-        line_tag = str(match.get("LINE", "")).strip()
-        if not line_tag or line_tag in seen_lines:
-            continue
-        seen_lines.add(line_tag)
-
         fields = match.get("fields", {})
         if not isinstance(fields, dict):
             fields = {}
 
-        # Standard field mapping
+        # Standard field extraction & normalization
+        fluid_code = (fields.get("Fluid Code") or fields.get("Fluid") or fields.get("Service") or "").strip()
+        sequence_no = (fields.get("Sequence No") or fields.get("Sequence Number") or fields.get("Seq No") or "").strip()
+        line_size = (fields.get("Line Size") or fields.get("Size") or fields.get("Line Size (mm)") or "").strip()
+        pipe_class = (fields.get("Pipe Class") or fields.get("Class") or fields.get("Spec") or "").strip()
+        insulation = (fields.get("Insulation") or fields.get("Insulation Code") or "").strip()
+        area_code = (fields.get("Area") or fields.get("Unit") or "").strip()
+
+        line_tag = str(match.get("LINE", "")).strip()
+
+        # Reconstruct clean exact LINE tag strictly from philosophy fields if fields are valid
+        reconstructed_parts = [p for p in [area_code, fluid_code, sequence_no, line_size, pipe_class, insulation] if p]
+        if len(reconstructed_parts) >= 3:
+            # Rebuild clean tag matching extracted fields
+            line_tag = "-".join(reconstructed_parts)
+
+        if not line_tag or line_tag in seen_lines:
+            continue
+        seen_lines.add(line_tag)
+
         parsed_item = {
             "LINE": line_tag,
             "page": match.get("page", 1),
             "confidence": match.get("confidence", "high"),
-            "fields": fields
+            "fields": fields,
+            "Fluid Code": fluid_code,
+            "Sequence No": sequence_no,
+            "Line Size (mm)": line_size,
+            "Pipe Class": pipe_class,
+            "Insulation": insulation
         }
-
-        # Normalize common field keys onto top-level dictionary for backward compatibility
-        parsed_item["Fluid Code"] = fields.get("Fluid Code") or fields.get("Fluid") or fields.get("Service") or ""
-        parsed_item["Sequence No"] = fields.get("Sequence No") or fields.get("Sequence Number") or fields.get("Seq No") or ""
-        parsed_item["Line Size (mm)"] = fields.get("Line Size") or fields.get("Size") or fields.get("Line Size (mm)") or ""
-        parsed_item["Pipe Class"] = fields.get("Pipe Class") or fields.get("Class") or fields.get("Spec") or ""
-        parsed_item["Insulation"] = fields.get("Insulation") or fields.get("Insulation Code") or ""
 
         final_lines.append(parsed_item)
 
