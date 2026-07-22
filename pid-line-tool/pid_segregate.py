@@ -178,6 +178,43 @@ def write_to_template(template_path: str, df: pd.DataFrame, parsed_df: pd.DataFr
     print(f"Saved → {output_path}")
 
 
+# Dynamic column alias mapping for standard template columns
+STANDARD_FIELD_ALIASES = {
+    "Fluid Code":      ["Fluid Code", "Fluid", "Service", "FluidCode"],
+    "Sequence No":     ["Sequence No", "Sequence Number", "Seq No", "SeqNo", "Sequence"],
+    "Line Size (mm)":  ["Line Size (mm)", "Line Size", "Size", "LineSize"],
+    "Pipe Class":      ["Pipe Class", "Class", "Spec", "PipeClass"],
+    "Insulation":      ["Insulation", "Insulation Code", "InsulationCode"],
+}
+
+def get_parsed_df_from_input(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Extract or generate parsed_df from input DataFrame.
+    If input already has parsed columns (from Philosophy AI), use them directly.
+    Otherwise fallback to parse_line on LINE column.
+    """
+    # Check if input already has parsed columns beyond LINE / Source PDF Name
+    existing_parsed = {}
+    for std_key, aliases in STANDARD_FIELD_ALIASES.items():
+        match_col = next((c for c in df.columns if c in aliases or c.strip().lower() in [a.lower() for a in aliases]), None)
+        if match_col:
+            existing_parsed[std_key] = df[match_col]
+
+    if existing_parsed:
+        # Fill missing standard keys with empty strings
+        for std_key in PARSED_COL_MAP.keys():
+            if std_key not in existing_parsed:
+                existing_parsed[std_key] = [""] * len(df)
+        parsed_df = pd.DataFrame(existing_parsed)
+        # Retain any extra custom dynamic fields (e.g. Area, Unit)
+        for col in df.columns:
+            if col not in [LINE_SOURCE_COL, "Source PDF Name"] and col not in parsed_df.columns:
+                parsed_df[col] = df[col]
+        return parsed_df
+    else:
+        return pd.DataFrame(df[LINE_SOURCE_COL].apply(parse_line).tolist())
+
+
 # ─────────────────────────────────────────────
 def process_file(input_path: str, template_path: str, output_path: str) -> pd.DataFrame:
     """Read input Excel, parse LINE column, export to template. Returns combined df for preview."""
@@ -189,7 +226,7 @@ def process_file(input_path: str, template_path: str, output_path: str) -> pd.Da
     if line_col != LINE_SOURCE_COL:
         df = df.rename(columns={line_col: LINE_SOURCE_COL})
 
-    parsed_df = pd.DataFrame(df[LINE_SOURCE_COL].apply(parse_line).tolist())
+    parsed_df = get_parsed_df_from_input(df)
 
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
     write_to_template(template_path, df, parsed_df, output_path, configs=None)
@@ -218,7 +255,7 @@ def export_with_mn_configs(input_path: str, template_path: str,
     if line_col != LINE_SOURCE_COL:
         df = df.rename(columns={line_col: LINE_SOURCE_COL})
 
-    parsed_df = pd.DataFrame(df[LINE_SOURCE_COL].apply(parse_line).tolist())
+    parsed_df = get_parsed_df_from_input(df)
 
     os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
     write_to_template(template_path, df, parsed_df, output_path, configs=configs)

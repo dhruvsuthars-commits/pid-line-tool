@@ -248,7 +248,11 @@
       </div>
       <div class="logo-text">P&amp;ID <span>Segregator</span></div>
     </div>
-    <div class="nav-pill">● AUTOCAD PROCESSOR</div>
+    <div style="display:flex; gap:10px; align-items:center">
+      <button class="btn-outline" id="tabBtnExtractor" style="border-color:var(--violet-l); color:var(--violet-l)" onclick="switchMainTab('extractor')">⚙ Extraction Tool</button>
+      <button class="btn-outline" id="tabBtnPhilosophy" onclick="switchMainTab('philosophy')">🧠 AI Philosophy</button>
+      <div class="nav-pill">● AUTOCAD &amp; AI PROCESSOR</div>
+    </div>
   </nav>
 
   <div class="hero">
@@ -401,6 +405,56 @@
   </div>
 </div>
 
+<!-- ══ PHILOSOPHY TAB ══ -->
+<div id="view-philosophy-container" style="display:none; max-width:1100px; margin:36px auto; padding:0 48px">
+  <div style="background:var(--card); border:1px solid var(--border2); border-radius:18px; padding:32px">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px">
+      <div>
+        <div class="hero-tag" style="background:rgba(124,58,237,0.15); border-color:rgba(167,139,250,0.3); color:var(--violet-l); margin-bottom:12px">
+          <span class="tag-dot" style="background:var(--violet-l)"></span> AI Line-Numbering Philosophy
+        </div>
+        <h2 style="font-size:28px; font-weight:700">Project Line-Numbering Philosophy</h2>
+        <p style="font-size:13px; color:var(--muted2); margin-top:4px">Describe your project's custom P&amp;ID line-numbering rules in plain English. The AI model will parse PDF line tags matching this structure.</p>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:center">
+        <select id="savedPhilosophiesDropdown" class="tt-search" style="width:220px; font-size:12px" onchange="onSelectPhilosophyProfile(this.value)">
+          <option value="">-- Saved Profiles --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Main Textarea -->
+    <div style="margin-bottom:20px">
+      <label style="font-family:var(--mono); font-size:11px; color:var(--muted2); display:block; margin-bottom:8px">LINE-NUMBERING PHILOSOPHY DESCRIPTION</label>
+      <textarea id="philosophyTextarea" rows="6" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:12px; padding:16px; font-family:var(--mono); font-size:13px; color:var(--text); outline:none; line-height:1.6" placeholder="Example: Area: 2-3 digit number. Line size: 1-2 digit number. Fluid code: 1-2 letters (A-Z). Sequence number: 3-5 digit number. Pipe class: 3-6 digit number followed by 1-2 letters. Insulation: 1-2 letters, optional. Segments are separated by '-'. Order: Area-LineSize-FluidCode-SequenceNo-PipeClass-Insulation."></textarea>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
+      <div style="display:flex; gap:10px; align-items:center">
+        <input type="text" id="philosophyProfileName" placeholder="Profile Name (e.g. Project A)" class="tt-search" style="width:220px"/>
+        <button class="btn-primary" onclick="savePhilosophyProfile()">💾 Save Profile</button>
+      </div>
+      <div id="philosophySaveStatus"></div>
+    </div>
+
+    <!-- Test on Sample Text Box -->
+    <div style="background:var(--card2); border:1px solid var(--border2); border-radius:14px; padding:24px">
+      <h3 style="font-size:16px; font-weight:700; margin-bottom:8px">🧪 Test on Sample Text</h3>
+      <p style="font-size:12px; color:var(--muted2); margin-bottom:16px">Paste example text or line tags below to preview how the AI model parses them against your philosophy.</p>
+
+      <textarea id="sampleSnippetTextarea" rows="3" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:10px; padding:12px; font-family:var(--mono); font-size:12px; color:var(--text); outline:none; margin-bottom:14px" placeholder="Paste sample snippet or tag, e.g. 12-50-HPS-120816-A5-H"></textarea>
+
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <button class="btn-outline" style="border-color:var(--cyan-l); color:var(--cyan-l)" onclick="previewPhilosophySampleText()">▶ Preview AI Extraction</button>
+        <div id="previewSpinner" style="display:none; font-family:var(--mono); font-size:12px; color:var(--cyan-l)">Analyzing sample with Claude AI…</div>
+      </div>
+
+      <div id="samplePreviewResult" style="margin-top:16px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ PROCESSING ══ -->
 <div id="view-proc" class="view">
   <div class="proc-icon">
@@ -462,6 +516,7 @@
               <th style="width:40px; text-align:center">Include</th>
               <th>Page #</th>
               <th>Extracted / Editable Line Tag</th>
+              <th>Confidence</th>
               <th>Fluid Code</th>
               <th>Sequence No</th>
               <th>Line Size</th>
@@ -743,8 +798,138 @@ async function doProcessPdf(){
     }, 400);
   }catch(e){
     showView('index');
-    document.getElementById('pdfStatus').innerHTML=smsg('err','Network error: '+e.message);
-    document.getElementById('btnProcessPdf').disabled=false;
+  }
+}
+
+function switchMainTab(tabName){
+  if(tabName === 'philosophy'){
+    document.getElementById('tabBtnPhilosophy').style.borderColor = 'var(--violet-l)';
+    document.getElementById('tabBtnPhilosophy').style.color = 'var(--violet-l)';
+    document.getElementById('tabBtnExtractor').style.borderColor = 'var(--border2)';
+    document.getElementById('tabBtnExtractor').style.color = 'var(--muted2)';
+    document.querySelector('#view-index .hero').style.display = 'none';
+    document.getElementById('view-philosophy-container').style.display = 'block';
+    loadPhilosophyProfiles();
+  } else {
+    document.getElementById('tabBtnExtractor').style.borderColor = 'var(--violet-l)';
+    document.getElementById('tabBtnExtractor').style.color = 'var(--violet-l)';
+    document.getElementById('tabBtnPhilosophy').style.borderColor = 'var(--border2)';
+    document.getElementById('tabBtnPhilosophy').style.color = 'var(--muted2)';
+    document.querySelector('#view-index .hero').style.display = 'grid';
+    document.getElementById('view-philosophy-container').style.display = 'none';
+  }
+}
+
+async function loadPhilosophyProfiles(){
+  try {
+    const r = await fetch('/philosophies');
+    const d = await r.json();
+    const dropdown = document.getElementById('savedPhilosophiesDropdown');
+    dropdown.innerHTML = '<option value="">-- Saved Profiles --</option>';
+
+    if(d.profiles){
+      window._philosophyProfiles = d.profiles;
+      for(const [name, text] of Object.entries(d.profiles)){
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if(d.active_name === name) opt.selected = true;
+        dropdown.appendChild(opt);
+      }
+    }
+    if(d.active_text && !document.getElementById('philosophyTextarea').value){
+      document.getElementById('philosophyTextarea').value = d.active_text;
+      document.getElementById('philosophyProfileName').value = d.active_name || '';
+    }
+  } catch(e) {
+    console.warn('Could not load philosophies', e);
+  }
+}
+
+function onSelectPhilosophyProfile(name){
+  if(!name || !window._philosophyProfiles || !window._philosophyProfiles[name]) return;
+  const text = window._philosophyProfiles[name];
+  document.getElementById('philosophyTextarea').value = text;
+  document.getElementById('philosophyProfileName').value = name;
+  fetch('/set-active-philosophy', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: name, text: text})
+  });
+}
+
+async function savePhilosophyProfile(){
+  const name = document.getElementById('philosophyProfileName').value.trim();
+  const text = document.getElementById('philosophyTextarea').value.trim();
+  const st = document.getElementById('philosophySaveStatus');
+  if(!name || !text){
+    st.innerHTML = smsg('warn', 'Provide name & text');
+    return;
+  }
+  try {
+    const r = await fetch('/save-philosophy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: name, text: text})
+    });
+    const d = await r.json();
+    if(r.ok){
+      st.innerHTML = smsg('ok', d.message);
+      loadPhilosophyProfiles();
+    } else {
+      st.innerHTML = smsg('err', d.error || 'Save failed');
+    }
+  } catch(e) {
+    st.innerHTML = smsg('err', 'Network error');
+  }
+}
+
+async function previewPhilosophySampleText(){
+  const sample = document.getElementById('sampleSnippetTextarea').value.trim();
+  const text = document.getElementById('philosophyTextarea').value.trim();
+  const spinner = document.getElementById('previewSpinner');
+  const resultDiv = document.getElementById('samplePreviewResult');
+
+  if(!sample || !text){
+    alert("Please enter both sample text and philosophy description.");
+    return;
+  }
+
+  spinner.style.display = 'block';
+  resultDiv.innerHTML = '';
+
+  try {
+    const r = await fetch('/preview-philosophy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sample_text: sample, philosophy: text})
+    });
+    const d = await r.json();
+    spinner.style.display = 'none';
+
+    if(!r.ok){
+      resultDiv.innerHTML = smsg('err', d.error || 'Preview failed');
+      return;
+    }
+
+    const items = d.parsed || [];
+    if(items.length === 0){
+      resultDiv.innerHTML = smsg('warn', 'No matching line tags identified in sample snippet.');
+      return;
+    }
+
+    let html = '<table class="dt" style="width:100%"><thead><tr><th>LINE Tag</th><th>Confidence</th><th>Parsed Fields</th></tr></thead><tbody>';
+    items.forEach(item => {
+      const conf = item.confidence || 'high';
+      const chipClass = conf === 'high' ? 'chip-g' : (conf === 'medium' ? 'chip-a' : 'chip-p');
+      const fieldsStr = Object.entries(item.fields || {}).map(([k, v]) => `<b>${k}:</b> ${v}`).join(' &nbsp;|&nbsp; ');
+      html += `<tr><td style="font-weight:700; color:var(--violet-l)">${item.LINE}</td><td><span class="chip ${chipClass}">${conf.toUpperCase()}</span></td><td>${fieldsStr}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    resultDiv.innerHTML = html;
+  } catch(e) {
+    spinner.style.display = 'none';
+    resultDiv.innerHTML = smsg('err', 'Network error: ' + e.message);
   }
 }
 
@@ -763,6 +948,9 @@ function renderPdfLineReviewTable(){
     const lineText = (item.LINE || '').toLowerCase();
     if(query && !lineText.includes(query)) return;
 
+    const conf = item.confidence || 'high';
+    const confBadge = conf === 'high' ? '<span class="chip chip-g">HIGH</span>' : (conf === 'medium' ? '<span class="chip chip-a">MED</span>' : '<span class="chip chip-p">LOW</span>');
+
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -777,6 +965,7 @@ function renderPdfLineReviewTable(){
           oninput="updatePdfLineTagLive(${index}, this.value)"
         />
       </td>
+      <td>${confBadge}</td>
       <td><span class="chip chip-v" id="fc_${index}">${item["Fluid Code"] || '-'}</span></td>
       <td id="seq_${index}">${item["Sequence No"] || '-'}</td>
       <td><span class="chip chip-p" id="sz_${index}">${item["Line Size (mm)"] ? item["Line Size (mm)"] + 'mm' : '-'}</span></td>

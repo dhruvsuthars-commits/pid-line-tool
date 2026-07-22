@@ -8,6 +8,15 @@ import pandas as pd
 from flask import Flask, request, jsonify, send_file, render_template, session
 from pid_segregate import process_file, export_with_mn_configs, merge_multiple_files
 from pid_pdf_ocr import extract_text_and_lines_from_pdf
+from line_philosophy_ai import extract_lines_with_philosophy, preview_philosophy_sample
+
+PHILOSOPHIES_STORE = os.path.join(SCRIPT_DIR, "philosophies_store")
+if os.environ.get("VERCEL"):
+    PHILOSOPHIES_STORE = "/tmp/philosophies_store"
+try:
+    os.makedirs(PHILOSOPHIES_STORE, exist_ok=True)
+except Exception:
+    pass
 
 # Optional Google Cloud Storage integration
 USE_GCS = os.environ.get("USE_GCS", "").lower() in ("1", "true", "yes")
@@ -163,7 +172,86 @@ def process():
 
 
 # ─────────────────────────────────────────────
-# Process PDF with OCR / PyMuPDF Line Extractor
+# Philosophy Management & Preview Routes
+# ─────────────────────────────────────────────
+@app.route("/save-philosophy", methods=["POST"])
+def save_philosophy():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    text = (data.get("text") or "").strip()
+
+    if not name or not text:
+        return jsonify({"error": "Profile name and philosophy text are required."}), 400
+
+    profiles_file = os.path.join(PHILOSOPHIES_STORE, "profiles.json")
+    profiles = {}
+    if os.path.exists(profiles_file):
+        try:
+            with open(profiles_file, "r") as f:
+                profiles = json.load(f)
+        except Exception:
+            profiles = {}
+
+    profiles[name] = text
+
+    with open(profiles_file, "w") as f:
+        json.dump(profiles, f, indent=2)
+
+    session["active_philosophy"] = text
+    session["active_philosophy_name"] = name
+    session.modified = True
+
+    return jsonify({"message": f"Philosophy profile '{name}' saved and set as active.", "profiles": profiles})
+
+
+@app.route("/philosophies", methods=["GET"])
+def get_philosophies():
+    profiles_file = os.path.join(PHILOSOPHIES_STORE, "profiles.json")
+    profiles = {}
+    if os.path.exists(profiles_file):
+        try:
+            with open(profiles_file, "r") as f:
+                profiles = json.load(f)
+        except Exception:
+            profiles = {}
+    return jsonify({
+        "profiles": profiles,
+        "active_name": session.get("active_philosophy_name", ""),
+        "active_text": session.get("active_philosophy", "")
+    })
+
+
+@app.route("/set-active-philosophy", methods=["POST"])
+def set_active_philosophy():
+    data = request.get_json() or {}
+    name = data.get("name", "")
+    text = data.get("text", "")
+    session["active_philosophy_name"] = name
+    session["active_philosophy"] = text
+    session.modified = True
+    return jsonify({"message": "Active philosophy updated.", "active_name": name, "active_text": text})
+
+
+@app.route("/preview-philosophy", methods=["POST"])
+def preview_philosophy():
+    data = request.get_json() or {}
+    sample_text = (data.get("sample_text") or "").strip()
+    philosophy = (data.get("philosophy") or "").strip()
+
+    if not sample_text or not philosophy:
+        return jsonify({"error": "Both sample text and philosophy description are required for preview."}), 400
+
+    try:
+        results = preview_philosophy_sample(sample_text, philosophy)
+        return jsonify({"parsed": results})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"AI Preview failed: {str(e)}"}), 500
+
+
+# ─────────────────────────────────────────────
+# Process PDF with OCR / AI Philosophy Line Extractor
 # ─────────────────────────────────────────────
 @app.route("/process-pdf", methods=["POST"])
 def process_pdf():
@@ -181,43 +269,47 @@ def process_pdf():
     pdf_path = os.path.join(INPUT_DIR, f"pdf_{base_name}.pdf")
     f.save(pdf_path)
 
-    # 1. Perform PDF OCR / Text line extraction
-    ocr_result = extract_text_and_lines_from_pdf(pdf_path)
-    lines_found = ocr_result.get("lines", [])
+    active_philosophy = session.get("active_philosophy", "").strip()
+
+    import fitz
+    doc = fitz.open(pdf_path)
+    page_texts = [page.get_text("text") for page in doc]
+    total_pages = len(doc)
+    doc.close()
+
+    lines_found = []
+    mode_used = "regex"
+
+    if active_philosophy:
+        try:
+            lines_found = extract_lines_with_philosophy(page_texts, active_philosophy)
+            mode_used = "ai_philosophy"
+        except Exception as e:
+            # Fallback to regex mode if AI fails or key missing
+            print(f"AI Philosophy extraction failed, falling back to regex: {str(e)}")
+            ocr_result = extract_text_and_lines_from_pdf(pdf_path)
+            lines_found = ocr_result.get("lines", [])
+            mode_used = "regex_fallback"
+    else:
+        ocr_result = extract_text_and_lines_from_pdf(pdf_path)
+        lines_found = ocr_result.get("lines", [])
 
     if not lines_found:
         return jsonify({"error": "No P&ID Line numbers were detected in the uploaded PDF file."}), 400
 
-    # 2. Build temporary Excel file matching input format
-    df_pdf_lines = pd.DataFrame([{"LINE": item["LINE"]} for item in lines_found])
-    temp_excel_path = os.path.join(INPUT_DIR, f"input_pdf_{base_name}.xlsx")
-    df_pdf_lines.to_excel(temp_excel_path, index=False)
-
-    # 3. Segregate into final template Excel
-    output_path = os.path.join(OUTPUT_DIR, f"PDF_{base_name}_Segregated.xlsx")
-    try:
-        df_result = process_file(temp_excel_path, TEMPLATE_PATH, output_path)
-    except Exception as e:
-        return jsonify({"error": f"Failed to generate line list from extracted PDF data: {str(e)}"}), 500
-
-    # Store session state
-    session["input_path"]  = temp_excel_path
-    session["output_name"] = f"PDF_{base_name}_Segregated.xlsx"
-    session["mn_configs"]  = []
-    session.modified = True
-
-    preview_cols   = ["LINE", "Fluid Code", "Sequence No", "Line Size (mm)", "Pipe Class", "Insulation"]
-    available_cols = [c for c in preview_cols if c in df_result.columns]
-    preview        = df_result[available_cols].fillna("").to_dict(orient="records")
-
-    fluid_codes  = sorted(df_result["Fluid Code"].dropna().unique().tolist())
-    pipe_classes = sorted(df_result["Pipe Class"].dropna().unique().tolist())
+    ocr_result = {
+        "total_pages": total_pages,
+        "total_lines_found": len(lines_found),
+        "lines": lines_found,
+        "mode_used": mode_used
+    }
 
     return jsonify({
-        "message": f"Successfully extracted {len(lines_found)} line candidates from PDF across {ocr_result['total_pages']} pages.",
+        "message": f"Successfully extracted {len(lines_found)} line candidates from PDF across {total_pages} pages ({mode_used} mode).",
         "pdf_info": ocr_result,
         "extracted_lines": lines_found,
-        "base_name": base_name
+        "base_name": base_name,
+        "mode_used": mode_used
     })
 
 
@@ -236,12 +328,30 @@ def confirm_pdf_lines():
     if not os.path.exists(TEMPLATE_PATH):
         return jsonify({"error": "No template found. Please upload Linelist_reference first."}), 400
 
-    # 1. Build Excel from confirmed line tags including uploaded PDF file name
+    # 1. Build Excel from confirmed line tags including uploaded PDF file name & dynamic parsed fields
     pdf_file_name = f"{base_name}.pdf"
-    df_pdf_lines = pd.DataFrame([{
-        "Source PDF Name": pdf_file_name,
-        "LINE": line_str
-    } for line_str in selected_lines])
+    excel_rows = []
+    
+    # Try to locate field dictionaries from session/request if available
+    field_map = data.get("field_map", {}) # dict of line_tag -> dict of fields
+
+    for line_obj in selected_lines:
+        if isinstance(line_obj, dict):
+            line_str = line_obj.get("LINE", "")
+            fields = line_obj.get("fields", {})
+        else:
+            line_str = str(line_obj)
+            fields = field_map.get(line_str, {})
+
+        row_dict = {
+            "Source PDF Name": pdf_file_name,
+            "LINE": line_str
+        }
+        if fields and isinstance(fields, dict):
+            row_dict.update(fields)
+        excel_rows.append(row_dict)
+
+    df_pdf_lines = pd.DataFrame(excel_rows)
     temp_excel_path = os.path.join(INPUT_DIR, f"input_pdf_{base_name}.xlsx")
     df_pdf_lines.to_excel(temp_excel_path, index=False)
 

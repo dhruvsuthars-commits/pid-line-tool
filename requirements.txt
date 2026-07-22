@@ -4,3 +4,4 @@ openpyxl
 gunicorn
 google-cloud-storage
 PyMuPDF
+anthropic

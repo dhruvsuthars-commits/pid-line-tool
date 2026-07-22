@@ -1,0 +1,159 @@
+import os
+import re
+import json
+import anthropic
+
+# Candidate tag extraction regex for broad shortlisting before LLM call
+CANDIDATE_REGEX = re.compile(
+    r'\b[A-Za-z0-9"#/]+(?:[-_/.][A-Za-z0-9"#/]+)+\b'
+)
+
+def extract_candidate_substrings(text: str) -> list[str]:
+    """
+    Extract candidate delimiter-separated substrings from raw page text.
+    """
+    if not text:
+        return []
+    matches = CANDIDATE_REGEX.findall(text)
+    candidates = []
+    seen = set()
+    for m in matches:
+        clean = m.strip().strip("-._/")
+        if len(clean) >= 3 and clean not in seen:
+            seen.add(clean)
+            candidates.append(clean)
+    return candidates
+
+
+def call_anthropic_for_candidates(candidates_page_map: dict[int, list[str]], philosophy: str) -> list[dict]:
+    """
+    Call Anthropic API (claude-sonnet-4-6) to identify and parse line tags based on line-numbering philosophy.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable is not set. Please configure your API key to use AI Philosophy extraction.")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    system_prompt = (
+        "You are an expert P&ID Piping & Instrumentation Engineering Assistant. "
+        "Your task is to analyze candidate strings extracted from P&ID drawing pages and filter & parse line tags "
+        "according to the user's specific line-numbering philosophy.\n\n"
+        "Instructions:\n"
+        "1. Only select candidates that genuinely match the described philosophy (reject strings that fail segment counts/patterns/order).\n"
+        "2. Parse each matching candidate into structured fields using the field names described in the philosophy. Infer field names directly from the philosophy text.\n"
+        "3. Assign a confidence score: 'high', 'medium', or 'low' for each match.\n"
+        "4. Return STRICT JSON ONLY as a JSON array of objects. Do not include markdown code block formatting or preambles.\n"
+        "Example JSON structure:\n"
+        "[\n"
+        '  {"LINE": "12-50-HPS-120816-A5-H", "page": 1, "fields": {"Area": "12", "Line Size": "50", "Fluid Code": "HPS", "Sequence No": "120816", "Pipe Class": "A5", "Insulation": "H"}, "confidence": "high"}\n'
+        "]"
+    )
+
+    user_prompt = (
+        f"Line-Numbering Philosophy:\n{philosophy}\n\n"
+        f"Candidate Substrings per Page:\n{json.dumps(candidates_page_map, indent=2)}\n\n"
+        "Extract, filter, and parse matching line tags into strict JSON array."
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=4000,
+        temperature=0.0,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}]
+    )
+
+    content = ""
+    for block in response.content:
+        if hasattr(block, 'text'):
+            content += block.text
+
+    content_clean = content.strip()
+    if content_clean.startswith("```"):
+        content_clean = re.sub(r'^```(?:json)?\n?', '', content_clean)
+        content_clean = re.sub(r'\n?```$', '', content_clean)
+
+    try:
+        results = json.loads(content_clean)
+        if not isinstance(results, list):
+            results = []
+    except Exception as e:
+        raise ValueError(f"Failed to parse JSON response from Claude model: {str(e)}. Raw response: {content[:200]}")
+
+    return results
+
+
+def extract_lines_with_philosophy(page_texts: list[str], philosophy: str) -> list[dict]:
+    """
+    Extracts and parses line tags across all pages of a PDF using Anthropic Claude sonnet-4-6.
+    Batches pages in chunks to stay within token limits and de-duplicates by 'LINE'.
+    """
+    if not philosophy or not philosophy.strip():
+        raise ValueError("No philosophy description provided.")
+
+    all_page_candidates = {}
+    for idx, text in enumerate(page_texts):
+        cands = extract_candidate_substrings(text)
+        if cands:
+            all_page_candidates[idx + 1] = cands
+
+    if not all_page_candidates:
+        return []
+
+    # Batch pages in chunks of 5 pages max to avoid prompt bloat
+    page_numbers = sorted(all_page_candidates.keys())
+    chunk_size = 5
+    page_chunks = [page_numbers[i:i + chunk_size] for i in range(0, len(page_numbers), chunk_size)]
+
+    all_raw_matches = []
+    for chunk in page_chunks:
+        chunk_map = {pg: all_page_candidates[pg] for pg in chunk}
+        chunk_results = call_anthropic_for_candidates(chunk_map, philosophy)
+        all_raw_matches.extend(chunk_results)
+
+    # De-duplicate by LINE tag
+    seen_lines = set()
+    final_lines = []
+
+    for match in all_raw_matches:
+        line_tag = str(match.get("LINE", "")).strip()
+        if not line_tag or line_tag in seen_lines:
+            continue
+        seen_lines.add(line_tag)
+
+        fields = match.get("fields", {})
+        if not isinstance(fields, dict):
+            fields = {}
+
+        # Standard field mapping
+        parsed_item = {
+            "LINE": line_tag,
+            "page": match.get("page", 1),
+            "confidence": match.get("confidence", "high"),
+            "fields": fields
+        }
+
+        # Normalize common field keys onto top-level dictionary for backward compatibility
+        parsed_item["Fluid Code"] = fields.get("Fluid Code") or fields.get("Fluid") or fields.get("Service") or ""
+        parsed_item["Sequence No"] = fields.get("Sequence No") or fields.get("Sequence Number") or fields.get("Seq No") or ""
+        parsed_item["Line Size (mm)"] = fields.get("Line Size") or fields.get("Size") or fields.get("Line Size (mm)") or ""
+        parsed_item["Pipe Class"] = fields.get("Pipe Class") or fields.get("Class") or fields.get("Spec") or ""
+        parsed_item["Insulation"] = fields.get("Insulation") or fields.get("Insulation Code") or ""
+
+        final_lines.append(parsed_item)
+
+    return final_lines
+
+
+def preview_philosophy_sample(sample_text: str, philosophy: str) -> list[dict]:
+    """
+    Tests line-numbering philosophy on sample text snippet.
+    """
+    candidates = extract_candidate_substrings(sample_text)
+    if not candidates:
+        # If text is raw line tags or lines separated by newlines
+        candidates = [line.strip() for line in sample_text.splitlines() if line.strip()]
+
+    sample_map = {1: candidates}
+    return call_anthropic_for_candidates(sample_map, philosophy)
