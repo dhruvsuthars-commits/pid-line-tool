@@ -74,44 +74,49 @@ def local_philosophy_parser(candidates_page_map: dict[int, list[str]], philosoph
             pipe_class = ""
             insulation = ""
 
-            # Classify parts
-            size_part = next((p for p in parts if re.match(r'^\d{1,3}(?:mm|")?$', p)), "")
-            seq_part  = next((p for p in parts if re.match(r'^\d{3,6}$', p) and p != size_part), "")
-            fluid_part= next((p for p in parts if re.match(r'^[A-Za-z]{2,5}$', p)), "")
-            class_part= next((p for p in parts if re.match(r'^[A-Za-z]\d{1,2}[A-Za-z0-9]*$', p)), "")
+            # Classify parts strictly based on user's exact philosophy specification:
+            # Area: [0-9]{2,3}
+            # Line Size: [0-9]{1,2}
+            # Fluid Code: [A-Z]{1,2}
+            # Sequence No: [0-9]{3,6}
+            # Pipe Class: [0-9]{3,6}[A-Z]{1,2}
+            # Insulation: [A-Z]{1,2}
+            if len(parts) >= 5:
+                area_code   = parts[0] if re.match(r'^\d{2,3}$', parts[0]) else ""
+                line_size   = parts[1] if re.match(r'^\d{1,2}$', parts[1]) else ""
+                fluid_code  = parts[2] if re.match(r'^[A-Za-z]{1,2}$', parts[2], re.IGNORECASE) else ""
+                sequence_no = parts[3] if re.match(r'^\d{3,6}$', parts[3]) else ""
+                pipe_class  = parts[4] if re.match(r'^\d{3,6}[A-Za-z]{1,2}$', parts[4], re.IGNORECASE) else ""
+                if len(parts) > 5 and re.match(r'^[A-Za-z]{1,2}$', parts[5], re.IGNORECASE):
+                    insulation = parts[5]
+            else:
+                fluid_part = next((p for p in parts if re.match(r'^[A-Za-z]{1,2}$', p, re.IGNORECASE)), "")
+                seq_part   = next((p for p in parts if re.match(r'^\d{3,6}$', p)), "")
+                size_part  = next((p for p in parts if re.match(r'^\d{1,2}$', p) and p != seq_part), "")
+                class_part = next((p for p in parts if re.match(r'^\d{3,6}[A-Za-z]{1,2}$', p, re.IGNORECASE)), "")
 
-            # Trim leading/trailing junk
-            clean_fluid = re.sub(r'^\d+', '', fluid_part or parts[0]).strip()
-            if not clean_fluid:
-                clean_fluid = parts[0]
+                fluid_code  = fluid_part
+                sequence_no = seq_part
+                line_size   = size_part
+                pipe_class  = class_part
 
-            clean_class = class_part or (parts[3] if len(parts) > 3 else "")
-            class_match = re.match(r'^([A-Za-z]\d+|[A-Za-z0-9]{2,4})', clean_class)
-            if class_match:
-                clean_class = class_match.group(1)
-
-            sequence_no = seq_part or (parts[1] if len(parts) > 1 else "")
-            line_size   = size_part or (parts[2] if len(parts) > 2 else "")
-            if len(parts) > 4:
-                insulation = parts[4]
-
-            # Build fields map
             fields = {
-                "Fluid Code": clean_fluid,
-                "Sequence No": sequence_no,
+                "Area": area_code,
                 "Line Size": line_size,
-                "Pipe Class": clean_class,
+                "Fluid Code": fluid_code,
+                "Sequence No": sequence_no,
+                "Pipe Class": pipe_class,
                 "Insulation": insulation
             }
-            if rules["has_area"] and len(parts) >= 5:
-                fields["Area"] = parts[0]
 
-            results.append({
-                "LINE": cand,
-                "page": page_num,
-                "fields": fields,
-                "confidence": "high" if (clean_fluid and sequence_no and line_size) else "medium"
-            })
+            # Only accept candidate if at least Fluid, Sequence, Size, Class match philosophy
+            if fluid_code and sequence_no and line_size and pipe_class:
+                results.append({
+                    "LINE": cand,
+                    "page": page_num,
+                    "fields": fields,
+                    "confidence": "high"
+                })
 
     return results
 
