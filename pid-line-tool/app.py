@@ -10,26 +10,6 @@ from pid_segregate import process_file, export_with_mn_configs, merge_multiple_f
 from pid_pdf_ocr import extract_text_and_lines_from_pdf
 from line_philosophy_ai import extract_lines_with_philosophy, preview_philosophy_sample
 
-PHILOSOPHIES_STORE = os.path.join(SCRIPT_DIR, "philosophies_store")
-if os.environ.get("VERCEL"):
-    PHILOSOPHIES_STORE = "/tmp/philosophies_store"
-try:
-    os.makedirs(PHILOSOPHIES_STORE, exist_ok=True)
-except Exception:
-    pass
-
-# Optional Google Cloud Storage integration
-USE_GCS = os.environ.get("USE_GCS", "").lower() in ("1", "true", "yes")
-GCS_BUCKET = os.environ.get("GCS_BUCKET")
-if USE_GCS and GCS_BUCKET:
-    try:
-        from gcs_utils import upload_file as gcs_upload, download_file as gcs_download, generate_signed_url
-    except Exception:
-        gcs_upload = gcs_download = generate_signed_url = None
-else:
-    gcs_upload = gcs_download = generate_signed_url = None
-
-
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
@@ -38,6 +18,14 @@ TEMPLATES_STORE = os.path.join(SCRIPT_DIR, "templates_store")
 OUTPUT_DIR      = os.path.join(SCRIPT_DIR, "output")
 INPUT_DIR       = os.path.join(SCRIPT_DIR, "input_store")
 TEMPLATE_PATH   = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
+
+PHILOSOPHIES_STORE = os.path.join(SCRIPT_DIR, "philosophies_store")
+if os.environ.get("VERCEL"):
+    PHILOSOPHIES_STORE = "/tmp/philosophies_store"
+try:
+    os.makedirs(PHILOSOPHIES_STORE, exist_ok=True)
+except Exception:
+    pass
 
 PORT            = int(os.environ.get("PORT", 5000))
 MAX_PORT        = int(os.environ.get("PORT_RANGE_END", 5100))
