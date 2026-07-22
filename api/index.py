@@ -1,11 +1,15 @@
 import sys
 import os
 
-# Absolute path resolution for Vercel serverless environment
+# Absolute path resolution for Vercel serverless environment & local static analyzers
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INNER_DIR = os.path.join(ROOT_DIR, "pid-line-tool")
 
-if INNER_DIR not in sys.path:
-    sys.path.insert(0, INNER_DIR)
+for path_entry in [ROOT_DIR, INNER_DIR]:
+    if path_entry not in sys.path:
+        sys.path.insert(0, path_entry)
 
-from app import app
+try:
+    from app import app
+except ImportError:
+    from pid_line_tool.app import app
