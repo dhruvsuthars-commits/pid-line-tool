@@ -36,17 +36,18 @@ def call_anthropic_for_candidates(candidates_page_map: dict[int, list[str]], phi
     client = anthropic.Anthropic(api_key=api_key)
 
     system_prompt = (
-        "You are an expert P&ID Piping & Instrumentation Engineering Assistant. "
-        "Your task is to analyze candidate strings extracted from P&ID drawing pages and filter & parse line tags "
-        "according to the user's specific line-numbering philosophy.\n\n"
-        "Instructions:\n"
-        "1. Only select candidates that genuinely match the described philosophy (reject strings that fail segment counts/patterns/order).\n"
-        "2. Parse each matching candidate into structured fields using the field names described in the philosophy. Infer field names directly from the philosophy text.\n"
-        "3. Assign a confidence score: 'high', 'medium', or 'low' for each match.\n"
-        "4. Return STRICT JSON ONLY as a JSON array of objects. Do not include markdown code block formatting or preambles.\n"
-        "Example JSON structure:\n"
+        "You are an expert P&ID Piping & Instrumentation Engineering Assistant.\n"
+        "Your task is to analyze candidate strings extracted from P&ID drawing pages, filter out any unwanted text, and strictly parse ONLY line tags that follow the user's specific line-numbering philosophy.\n\n"
+        "CRITICAL RULES:\n"
+        "1. STRICT SEGMENT & PATTERN MATCHING: A valid line tag MUST match the exact segment count, segment types, and segment order defined in the philosophy.\n"
+        "2. STRIP UNWANTED SURROUNDING TEXT: If a candidate string contains leading/trailing text or line numbers appended to adjacent text (e.g., '101SOL-100305-50-B2' where '101' is an unwanted prefix or line size, or '80BPA-010101-300-B1BPA'), trim or isolate ONLY the clean matching LINE tag, such as 'SOL-100305-50-B2' or 'BPA-010101-300-B1'. NEVER include unwanted prefixes in Fluid Code or Pipe Class.\n"
+        "3. FIELD INFERENCE & PARSING: Extract each segment into its exact field (e.g., Fluid Code, Sequence No, Line Size, Pipe Class, Insulation). Fluid Code must ONLY contain the fluid abbreviation (e.g. 'SOL', 'CHBR', 'BPA', 'PRO'). Pipe Class must ONLY contain the specification code (e.g. 'B2', 'A2', 'B1').\n"
+        "4. REJECT INVALID STRINGS: Reject candidates completely if they cannot form a clean valid line tag under the philosophy.\n"
+        "5. CONFIDENCE SCORE: Assign 'high' for perfect matches, 'medium' for minor cleanups, 'low' for uncertain matches.\n"
+        "6. Return STRICT JSON ONLY as a JSON array of objects without markdown code block fences.\n\n"
+        "Example JSON output:\n"
         "[\n"
-        '  {"LINE": "12-50-HPS-120816-A5-H", "page": 1, "fields": {"Area": "12", "Line Size": "50", "Fluid Code": "HPS", "Sequence No": "120816", "Pipe Class": "A5", "Insulation": "H"}, "confidence": "high"}\n'
+        '  {"LINE": "SOL-100305-50-B2", "page": 1, "fields": {"Fluid Code": "SOL", "Sequence No": "100305", "Line Size": "50", "Pipe Class": "B2", "Insulation": ""}, "confidence": "high"}\n'
         "]"
     )
 

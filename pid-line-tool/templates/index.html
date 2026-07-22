@@ -859,7 +859,7 @@ function insertPhilosophyPreset(presetKey){
   const textarea = document.getElementById('philosophyTextarea');
   const nameInp = document.getElementById('philosophyProfileName');
   if(presetKey === 'standard'){
-    textarea.value = "Fluid code: 2-4 uppercase letters (e.g. HPS, CWS, IA).\nSequence number: 4-6 digit number.\nLine size: 1-3 digit number (mm).\nPipe class: 2-5 alphanumeric characters (e.g. A5, B1).\nInsulation: 1-2 letters (optional).\nDelimiter: '-'.\nOrder: FluidCode-SequenceNo-LineSize-PipeClass-Insulation.";
+    textarea.value = "Fluid code: 2-4 uppercase letters ONLY (e.g. SOL, CHBR, BPA, PRO). Do NOT include leading line numbers or area numbers like 101 or 80 in Fluid Code.\nSequence number: 4-6 digit number.\nLine size: 1-3 digit number (mm).\nPipe class: 2-5 alphanumeric characters (e.g. B2, A2, B1).\nInsulation: 1-2 letters (optional).\nDelimiter: '-'.\nOrder: FluidCode-SequenceNo-LineSize-PipeClass-Insulation.\nRule: Trim all unwanted surrounding text or appended line size numbers from Fluid Code and Pipe Class.";
     if(!nameInp.value) nameInp.value = "Standard Project Format";
   } else if(presetKey === 'area'){
     textarea.value = "Area: 2-3 digit number.\nLine size: 1-2 digit number.\nFluid code: 2-4 uppercase letters.\nSequence number: 4-6 digit number.\nPipe class: 2-5 alphanumeric characters.\nInsulation: 1-2 letters (optional).\nDelimiter: '-'.\nOrder: Area-LineSize-FluidCode-SequenceNo-PipeClass-Insulation.";
