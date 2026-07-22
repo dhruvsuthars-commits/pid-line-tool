@@ -123,20 +123,32 @@ def extract_lines_with_philosophy(page_texts: list[str], philosophy: str) -> lis
             fields = {}
 
         # Standard field extraction & normalization
-        fluid_code = (fields.get("Fluid Code") or fields.get("Fluid") or fields.get("Service") or "").strip()
-        sequence_no = (fields.get("Sequence No") or fields.get("Sequence Number") or fields.get("Seq No") or "").strip()
-        line_size = (fields.get("Line Size") or fields.get("Size") or fields.get("Line Size (mm)") or "").strip()
-        pipe_class = (fields.get("Pipe Class") or fields.get("Class") or fields.get("Spec") or "").strip()
-        insulation = (fields.get("Insulation") or fields.get("Insulation Code") or "").strip()
-        area_code = (fields.get("Area") or fields.get("Unit") or "").strip()
+        raw_fluid = (fields.get("Fluid Code") or fields.get("Fluid") or fields.get("Service") or "").strip()
+        raw_seq   = (fields.get("Sequence No") or fields.get("Sequence Number") or fields.get("Seq No") or "").strip()
+        raw_size  = (fields.get("Line Size") or fields.get("Size") or fields.get("Line Size (mm)") or "").strip()
+        raw_class = (fields.get("Pipe Class") or fields.get("Class") or fields.get("Spec") or "").strip()
+        raw_ins   = (fields.get("Insulation") or fields.get("Insulation Code") or "").strip()
+        raw_area  = (fields.get("Area") or fields.get("Unit") or "").strip()
 
-        line_tag = str(match.get("LINE", "")).strip()
+        # Deterministic Regex Cleaners:
+        # 1. Clean Fluid Code: strip leading numbers (e.g., '101SOL' -> 'SOL', '80BPA' -> 'BPA')
+        fluid_code = re.sub(r'^\d+', '', raw_fluid).strip()
 
-        # Reconstruct clean exact LINE tag strictly from philosophy fields if fields are valid
+        # 2. Clean Pipe Class: extract spec code like A1, A2, B1, B2, C14 (strip appended fluid names like 'B1BPA' -> 'B1', 'B2 C14' -> 'B2')
+        pipe_class_match = re.match(r'^([A-Za-z]\d+|[A-Za-z0-9]{2,4})', raw_class)
+        pipe_class = pipe_class_match.group(1) if pipe_class_match else raw_class
+
+        sequence_no = raw_seq
+        line_size = raw_size
+        insulation = raw_ins
+        area_code = raw_area
+
+        # Reconstruct clean exact LINE tag strictly from philosophy fields
         reconstructed_parts = [p for p in [area_code, fluid_code, sequence_no, line_size, pipe_class, insulation] if p]
         if len(reconstructed_parts) >= 3:
-            # Rebuild clean tag matching extracted fields
             line_tag = "-".join(reconstructed_parts)
+        else:
+            line_tag = str(match.get("LINE", "")).strip()
 
         if not line_tag or line_tag in seen_lines:
             continue
@@ -146,7 +158,13 @@ def extract_lines_with_philosophy(page_texts: list[str], philosophy: str) -> lis
             "LINE": line_tag,
             "page": match.get("page", 1),
             "confidence": match.get("confidence", "high"),
-            "fields": fields,
+            "fields": {
+                "Fluid Code": fluid_code,
+                "Sequence No": sequence_no,
+                "Line Size": line_size,
+                "Pipe Class": pipe_class,
+                "Insulation": insulation
+            },
             "Fluid Code": fluid_code,
             "Sequence No": sequence_no,
             "Line Size (mm)": line_size,
