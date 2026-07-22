@@ -58,7 +58,7 @@ def call_anthropic_for_candidates(candidates_page_map: dict[int, list[str]], phi
     )
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=4000,
         temperature=0.0,
         system=system_prompt,
