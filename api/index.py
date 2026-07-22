@@ -1,15 +1,13 @@
 import sys
 import os
 
-# Absolute path resolution for Vercel serverless environment & local static analyzers
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INNER_DIR = os.path.join(ROOT_DIR, "pid-line-tool")
+# Add inner project directory to system path for Vercel & IDE static analysis
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "pid-line-tool"))
 
-for path_entry in [ROOT_DIR, INNER_DIR]:
-    if path_entry not in sys.path:
-        sys.path.insert(0, path_entry)
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
-try:
-    from app import app
-except ImportError:
-    from pid_line_tool.app import app
+# Import Flask app entrypoint
+import app
+app = app.app
