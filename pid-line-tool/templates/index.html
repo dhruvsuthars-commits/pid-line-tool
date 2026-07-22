@@ -402,64 +402,64 @@
         <div id="pdfStatus"></div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ══ PHILOSOPHY TAB ══ -->
-<div id="view-philosophy-container" style="display:none; max-width:1100px; margin:36px auto; padding:0 48px">
-  <div style="background:var(--card); border:1px solid var(--border2); border-radius:18px; padding:32px">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px">
-      <div>
-        <div class="hero-tag" style="background:rgba(124,58,237,0.15); border-color:rgba(167,139,250,0.3); color:var(--violet-l); margin-bottom:12px">
-          <span class="tag-dot" style="background:var(--violet-l)"></span> AI Line-Numbering Philosophy
+    <!-- PHILOSOPHY TAB CONTAINER -->
+    <div id="view-philosophy-container" style="display:none; flex:1">
+      <div style="background:var(--card); border:1px solid var(--border2); border-radius:18px; padding:32px">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px">
+          <div>
+            <div class="hero-tag" style="background:rgba(124,58,237,0.15); border-color:rgba(167,139,250,0.3); color:var(--violet-l); margin-bottom:12px">
+              <span class="tag-dot" style="background:var(--violet-l)"></span> AI Line-Numbering Philosophy
+            </div>
+            <h2 style="font-size:26px; font-weight:700">Project Line-Numbering Philosophy</h2>
+            <p style="font-size:13px; color:var(--muted2); margin-top:4px">Describe your project's custom P&amp;ID line-numbering rules in plain English. The AI model will parse PDF line tags matching this structure.</p>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center">
+            <select id="savedPhilosophiesDropdown" class="tt-search" style="width:200px; font-size:12px" onchange="onSelectPhilosophyProfile(this.value)">
+              <option value="">-- Saved Profiles --</option>
+            </select>
+          </div>
         </div>
-        <h2 style="font-size:28px; font-weight:700">Project Line-Numbering Philosophy</h2>
-        <p style="font-size:13px; color:var(--muted2); margin-top:4px">Describe your project's custom P&amp;ID line-numbering rules in plain English. The AI model will parse PDF line tags matching this structure.</p>
+
+        <!-- Preset Template Insertion Row -->
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap">
+          <span style="font-family:var(--mono); font-size:11px; color:var(--muted2)">⚡ Insert Template Preset:</span>
+          <button class="btn-outline" style="padding:5px 12px; font-size:11px; color:var(--cyan-l); border-color:rgba(6,182,212,0.4)" onclick="insertPhilosophyPreset('standard')">+ Standard (Fluid-Seq-Size-Class-Ins)</button>
+          <button class="btn-outline" style="padding:5px 12px; font-size:11px; color:var(--lime-l); border-color:rgba(132,204,22,0.4)" onclick="insertPhilosophyPreset('area')">+ Area First (Area-Size-Fluid-Seq-Class-Ins)</button>
+          <button class="btn-outline" style="padding:5px 12px; font-size:11px; color:var(--pink-l); border-color:rgba(236,72,153,0.4)" onclick="insertPhilosophyPreset('custom')">+ Imperial/Custom (Unit-Size-Service-Seq-Spec)</button>
+          <button class="btn-outline" style="padding:5px 12px; font-size:11px; color:var(--amber-l); border-color:rgba(245,158,11,0.4)" onclick="insertPhilosophyPreset('clear')">🗑 Clear</button>
+        </div>
+
+        <!-- Main Textarea -->
+        <div style="margin-bottom:20px">
+          <label style="font-family:var(--mono); font-size:11px; color:var(--muted2); display:block; margin-bottom:8px">LINE-NUMBERING PHILOSOPHY DESCRIPTION</label>
+          <textarea id="philosophyTextarea" rows="5" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:12px; padding:16px; font-family:var(--mono); font-size:13px; color:var(--text); outline:none; line-height:1.6" placeholder="Example: Area: 2-3 digit number. Line size: 1-2 digit number. Fluid code: 1-2 letters (A-Z). Sequence number: 3-5 digit number. Pipe class: 3-6 digit number followed by 1-2 letters. Insulation: 1-2 letters, optional. Segments are separated by '-'. Order: Area-LineSize-FluidCode-SequenceNo-PipeClass-Insulation."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px">
+          <div style="display:flex; gap:10px; align-items:center">
+            <input type="text" id="philosophyProfileName" placeholder="Profile Name (e.g. Project A)" class="tt-search" style="width:220px"/>
+            <button class="btn-primary" onclick="savePhilosophyProfile()">💾 Save Profile</button>
+          </div>
+          <div id="philosophySaveStatus"></div>
+        </div>
+
+        <!-- Test on Sample Text Box -->
+        <div style="background:var(--card2); border:1px solid var(--border2); border-radius:14px; padding:20px">
+          <h3 style="font-size:15px; font-weight:700; margin-bottom:6px">🧪 Test on Sample Text</h3>
+          <p style="font-size:12px; color:var(--muted2); margin-bottom:14px">Paste example text or line tags below to preview how the AI model parses them against your philosophy.</p>
+
+          <textarea id="sampleSnippetTextarea" rows="2" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:10px; padding:12px; font-family:var(--mono); font-size:12px; color:var(--text); outline:none; margin-bottom:12px" placeholder="Paste sample snippet or tag, e.g. 12-50-HPS-120816-A5-H"></textarea>
+
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <button class="btn-outline" style="border-color:var(--cyan-l); color:var(--cyan-l)" onclick="previewPhilosophySampleText()">▶ Preview AI Extraction</button>
+            <div id="previewSpinner" style="display:none; font-family:var(--mono); font-size:12px; color:var(--cyan-l)">Analyzing sample with Claude AI…</div>
+          </div>
+
+          <div id="samplePreviewResult" style="margin-top:14px"></div>
+        </div>
       </div>
-
-      <div style="display:flex; gap:12px; align-items:center">
-        <select id="savedPhilosophiesDropdown" class="tt-search" style="width:220px; font-size:12px" onchange="onSelectPhilosophyProfile(this.value)">
-          <option value="">-- Saved Profiles --</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Preset Template Insertion Row -->
-    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap">
-      <span style="font-family:var(--mono); font-size:11px; color:var(--muted2)">⚡ Insert Template Preset:</span>
-      <button class="btn-outline" style="padding:4px 10px; font-size:11px; color:var(--cyan-l)" onclick="insertPhilosophyPreset('standard')">+ Standard (Fluid-Seq-Size-Class-Ins)</button>
-      <button class="btn-outline" style="padding:4px 10px; font-size:11px; color:var(--lime-l)" onclick="insertPhilosophyPreset('area')">+ Area First (Area-Size-Fluid-Seq-Class-Ins)</button>
-      <button class="btn-outline" style="padding:4px 10px; font-size:11px; color:var(--pink-l)" onclick="insertPhilosophyPreset('custom')">+ Imperial/Custom (Unit-Size-Service-Seq-Spec)</button>
-      <button class="btn-outline" style="padding:4px 10px; font-size:11px; color:var(--amber-l)" onclick="insertPhilosophyPreset('clear')">🗑 Clear</button>
-    </div>
-
-    <!-- Main Textarea -->
-    <div style="margin-bottom:20px">
-      <label style="font-family:var(--mono); font-size:11px; color:var(--muted2); display:block; margin-bottom:8px">LINE-NUMBERING PHILOSOPHY DESCRIPTION</label>
-      <textarea id="philosophyTextarea" rows="6" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:12px; padding:16px; font-family:var(--mono); font-size:13px; color:var(--text); outline:none; line-height:1.6" placeholder="Example: Area: 2-3 digit number. Line size: 1-2 digit number. Fluid code: 1-2 letters (A-Z). Sequence number: 3-5 digit number. Pipe class: 3-6 digit number followed by 1-2 letters. Insulation: 1-2 letters, optional. Segments are separated by '-'. Order: Area-LineSize-FluidCode-SequenceNo-PipeClass-Insulation."></textarea>
-    </div>
-
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
-      <div style="display:flex; gap:10px; align-items:center">
-        <input type="text" id="philosophyProfileName" placeholder="Profile Name (e.g. Project A)" class="tt-search" style="width:220px"/>
-        <button class="btn-primary" onclick="savePhilosophyProfile()">💾 Save Profile</button>
-      </div>
-      <div id="philosophySaveStatus"></div>
-    </div>
-
-    <!-- Test on Sample Text Box -->
-    <div style="background:var(--card2); border:1px solid var(--border2); border-radius:14px; padding:24px">
-      <h3 style="font-size:16px; font-weight:700; margin-bottom:8px">🧪 Test on Sample Text</h3>
-      <p style="font-size:12px; color:var(--muted2); margin-bottom:16px">Paste example text or line tags below to preview how the AI model parses them against your philosophy.</p>
-
-      <textarea id="sampleSnippetTextarea" rows="3" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border2); border-radius:10px; padding:12px; font-family:var(--mono); font-size:12px; color:var(--text); outline:none; margin-bottom:14px" placeholder="Paste sample snippet or tag, e.g. 12-50-HPS-120816-A5-H"></textarea>
-
-      <div style="display:flex; justify-content:space-between; align-items:center">
-        <button class="btn-outline" style="border-color:var(--cyan-l); color:var(--cyan-l)" onclick="previewPhilosophySampleText()">▶ Preview AI Extraction</button>
-        <div id="previewSpinner" style="display:none; font-family:var(--mono); font-size:12px; color:var(--cyan-l)">Analyzing sample with Claude AI…</div>
-      </div>
-
-      <div id="samplePreviewResult" style="margin-top:16px"></div>
     </div>
   </div>
 </div>
@@ -816,7 +816,7 @@ function switchMainTab(tabName){
     document.getElementById('tabBtnPhilosophy').style.color = 'var(--violet-l)';
     document.getElementById('tabBtnExtractor').style.borderColor = 'var(--border2)';
     document.getElementById('tabBtnExtractor').style.color = 'var(--muted2)';
-    document.querySelector('#view-index .hero').style.display = 'none';
+    document.querySelector('.hero-right').style.display = 'none';
     document.getElementById('view-philosophy-container').style.display = 'block';
     loadPhilosophyProfiles();
   } else {
@@ -824,7 +824,7 @@ function switchMainTab(tabName){
     document.getElementById('tabBtnExtractor').style.color = 'var(--violet-l)';
     document.getElementById('tabBtnPhilosophy').style.borderColor = 'var(--border2)';
     document.getElementById('tabBtnPhilosophy').style.color = 'var(--muted2)';
-    document.querySelector('#view-index .hero').style.display = 'grid';
+    document.querySelector('.hero-right').style.display = 'block';
     document.getElementById('view-philosophy-container').style.display = 'none';
   }
 }
