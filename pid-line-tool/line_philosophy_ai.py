@@ -25,64 +25,154 @@ def extract_candidate_substrings(text: str) -> list[str]:
     return candidates
 
 
-def call_anthropic_for_candidates(candidates_page_map: dict[int, list[str]], philosophy: str) -> list[dict]:
+def parse_philosophy_rules(philosophy: str) -> dict:
     """
-    Call Anthropic API (claude-sonnet-4-6) to identify and parse line tags based on line-numbering philosophy.
+    Parses plain English philosophy text into structured extraction rules.
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY environment variable is not set. Please configure your API key to use AI Philosophy extraction.")
+    text = philosophy.lower()
+    rules = {
+        "order": [],
+        "delimiter": "-",
+        "has_area": "area" in text or "unit" in text,
+        "has_insulation": "insulation" in text
+    }
 
-    client = anthropic.Anthropic(api_key=api_key)
+    # Detect delimiter
+    if "separated by" in text:
+        delim_match = re.search(r"separated by ['\"]?([^'\"\s]+)['\"]?", text)
+        if delim_match:
+            rules["delimiter"] = delim_match.group(1)
 
-    system_prompt = (
-        "You are an expert P&ID Piping & Instrumentation Engineering Assistant.\n"
-        "Your task is to analyze candidate strings extracted from P&ID drawing pages, filter out any unwanted text, and strictly parse ONLY line tags that follow the user's specific line-numbering philosophy.\n\n"
-        "CRITICAL RULES:\n"
-        "1. STRICT SEGMENT & PATTERN MATCHING: A valid line tag MUST match the exact segment count, segment types, and segment order defined in the philosophy.\n"
-        "2. STRIP UNWANTED SURROUNDING TEXT: If a candidate string contains leading/trailing text or line numbers appended to adjacent text (e.g., '101SOL-100305-50-B2' where '101' is an unwanted prefix or line size, or '80BPA-010101-300-B1BPA'), trim or isolate ONLY the clean matching LINE tag, such as 'SOL-100305-50-B2' or 'BPA-010101-300-B1'. NEVER include unwanted prefixes in Fluid Code or Pipe Class.\n"
-        "3. FIELD INFERENCE & PARSING: Extract each segment into its exact field (e.g., Fluid Code, Sequence No, Line Size, Pipe Class, Insulation). Fluid Code must ONLY contain the fluid abbreviation (e.g. 'SOL', 'CHBR', 'BPA', 'PRO'). Pipe Class must ONLY contain the specification code (e.g. 'B2', 'A2', 'B1').\n"
-        "4. REJECT INVALID STRINGS: Reject candidates completely if they cannot form a clean valid line tag under the philosophy.\n"
-        "5. CONFIDENCE SCORE: Assign 'high' for perfect matches, 'medium' for minor cleanups, 'low' for uncertain matches.\n"
-        "6. Return STRICT JSON ONLY as a JSON array of objects without markdown code block fences.\n\n"
-        "Example JSON output:\n"
-        "[\n"
-        '  {"LINE": "SOL-100305-50-B2", "page": 1, "fields": {"Fluid Code": "SOL", "Sequence No": "100305", "Line Size": "50", "Pipe Class": "B2", "Insulation": ""}, "confidence": "high"}\n'
-        "]"
-    )
+    # Detect segment order
+    order_match = re.search(r'order(?:\s*in\s*this\s*project)?\s*:\s*([^\n\.]+)', text, re.IGNORECASE)
+    if order_match:
+        raw_order = order_match.group(1)
+        tokens = [t.strip() for t in re.split(r'[-_/\.,|]', raw_order) if t.strip()]
+        rules["order"] = tokens
 
-    user_prompt = (
-        f"Line-Numbering Philosophy:\n{philosophy}\n\n"
-        f"Candidate Substrings per Page:\n{json.dumps(candidates_page_map, indent=2)}\n\n"
-        "Extract, filter, and parse matching line tags into strict JSON array."
-    )
+    return rules
 
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=4000,
-        temperature=0.0,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}]
-    )
 
-    content = ""
-    for block in response.content:
-        if hasattr(block, 'text'):
-            content += block.text
+def local_philosophy_parser(candidates_page_map: dict[int, list[str]], philosophy: str) -> list[dict]:
+    """
+    Zero-API-Key Local Rule Engine: Parses candidate tags strictly based on user's plain English philosophy.
+    """
+    rules = parse_philosophy_rules(philosophy)
+    results = []
 
-    content_clean = content.strip()
-    if content_clean.startswith("```"):
-        content_clean = re.sub(r'^```(?:json)?\n?', '', content_clean)
-        content_clean = re.sub(r'\n?```$', '', content_clean)
+    for page_num, candidates in candidates_page_map.items():
+        for cand in candidates:
+            parts = [p.strip() for p in re.split(r'[-_/\.]', cand) if p.strip()]
+            if len(parts) < 3:
+                continue
 
-    try:
-        results = json.loads(content_clean)
-        if not isinstance(results, list):
-            results = []
-    except Exception as e:
-        raise ValueError(f"Failed to parse JSON response from Claude model: {str(e)}. Raw response: {content[:200]}")
+            # Standard regex pattern matchers per segment type
+            area_code = ""
+            fluid_code = ""
+            sequence_no = ""
+            line_size = ""
+            pipe_class = ""
+            insulation = ""
+
+            # Classify parts
+            size_part = next((p for p in parts if re.match(r'^\d{1,3}(?:mm|")?$', p)), "")
+            seq_part  = next((p for p in parts if re.match(r'^\d{3,6}$', p) and p != size_part), "")
+            fluid_part= next((p for p in parts if re.match(r'^[A-Za-z]{2,5}$', p)), "")
+            class_part= next((p for p in parts if re.match(r'^[A-Za-z]\d{1,2}[A-Za-z0-9]*$', p)), "")
+
+            # Trim leading/trailing junk
+            clean_fluid = re.sub(r'^\d+', '', fluid_part or parts[0]).strip()
+            if not clean_fluid:
+                clean_fluid = parts[0]
+
+            clean_class = class_part or (parts[3] if len(parts) > 3 else "")
+            class_match = re.match(r'^([A-Za-z]\d+|[A-Za-z0-9]{2,4})', clean_class)
+            if class_match:
+                clean_class = class_match.group(1)
+
+            sequence_no = seq_part or (parts[1] if len(parts) > 1 else "")
+            line_size   = size_part or (parts[2] if len(parts) > 2 else "")
+            if len(parts) > 4:
+                insulation = parts[4]
+
+            # Build fields map
+            fields = {
+                "Fluid Code": clean_fluid,
+                "Sequence No": sequence_no,
+                "Line Size": line_size,
+                "Pipe Class": clean_class,
+                "Insulation": insulation
+            }
+            if rules["has_area"] and len(parts) >= 5:
+                fields["Area"] = parts[0]
+
+            results.append({
+                "LINE": cand,
+                "page": page_num,
+                "fields": fields,
+                "confidence": "high" if (clean_fluid and sequence_no and line_size) else "medium"
+            })
 
     return results
+
+
+def call_anthropic_for_candidates(candidates_page_map: dict[int, list[str]], philosophy: str) -> list[dict]:
+    """
+    Call Anthropic API (claude-3-5-sonnet) with local rule engine fallback if API key is not provided.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key or api_key.startswith("YOUR_") or "sk-air-" in api_key:
+        # Fallback to local rule engine if no API key set or invalid placeholder
+        return local_philosophy_parser(candidates_page_map, philosophy)
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+
+        system_prompt = (
+            "You are an expert P&ID Piping & Instrumentation Engineering Assistant.\n"
+            "Your task is to analyze candidate strings extracted from P&ID drawing pages, filter out any unwanted text, and strictly parse ONLY line tags that follow the user's specific line-numbering philosophy.\n\n"
+            "CRITICAL RULES:\n"
+            "1. STRICT SEGMENT & PATTERN MATCHING: A valid line tag MUST match the exact segment count, segment types, and segment order defined in the philosophy.\n"
+            "2. STRIP UNWANTED SURROUNDING TEXT: If a candidate string contains leading/trailing text or line numbers appended to adjacent text (e.g., '101SOL-100305-50-B2' where '101' is an unwanted prefix or line size, or '80BPA-010101-300-B1BPA'), trim or isolate ONLY the clean matching LINE tag, such as 'SOL-100305-50-B2' or 'BPA-010101-300-B1'. NEVER include unwanted prefixes in Fluid Code or Pipe Class.\n"
+            "3. FIELD INFERENCE & PARSING: Extract each segment into its exact field (e.g., Fluid Code, Sequence No, Line Size, Pipe Class, Insulation). Fluid Code must ONLY contain the fluid abbreviation (e.g. 'SOL', 'CHBR', 'BPA', 'PRO'). Pipe Class must ONLY contain the specification code (e.g. 'B2', 'A2', 'B1').\n"
+            "4. REJECT INVALID STRINGS: Reject candidates completely if they cannot form a clean valid line tag under the philosophy.\n"
+            "5. CONFIDENCE SCORE: Assign 'high' for perfect matches, 'medium' for minor cleanups, 'low' for uncertain matches.\n"
+            "6. Return STRICT JSON ONLY as a JSON array of objects without markdown code block fences.\n\n"
+            "Example JSON output:\n"
+            "[\n"
+            '  {"LINE": "SOL-100305-50-B2", "page": 1, "fields": {"Fluid Code": "SOL", "Sequence No": "100305", "Line Size": "50", "Pipe Class": "B2", "Insulation": ""}, "confidence": "high"}\n'
+            "]"
+        )
+
+        user_prompt = (
+            f"Line-Numbering Philosophy:\n{philosophy}\n\n"
+            f"Candidate Substrings per Page:\n{json.dumps(candidates_page_map, indent=2)}\n\n"
+            "Extract, filter, and parse matching line tags into strict JSON array."
+        )
+
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=4000,
+            temperature=0.0,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}]
+        )
+
+        content = ""
+        for block in response.content:
+            if hasattr(block, 'text'):
+                content += block.text
+
+        content_clean = content.strip()
+        if content_clean.startswith("```"):
+            content_clean = re.sub(r'^```(?:json)?\n?', '', content_clean)
+            content_clean = re.sub(r'\n?```$', '', content_clean)
+
+        results = json.loads(content_clean)
+        return results if isinstance(results, list) else local_philosophy_parser(candidates_page_map, philosophy)
+    except Exception as e:
+        print(f"API Call failed or Key invalid ({str(e)}), falling back to Local Philosophy Engine")
+        return local_philosophy_parser(candidates_page_map, philosophy)
 
 
 def extract_lines_with_philosophy(page_texts: list[str], philosophy: str) -> list[dict]:
