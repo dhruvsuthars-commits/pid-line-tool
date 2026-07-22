@@ -1013,21 +1013,34 @@ function updatePdfLineTagLive(index, newTagValue){
   const cleanVal = newTagValue.trim();
   pdfExtractedData[index].LINE = newTagValue;
 
-  // Re-parse properties live
+  // Re-parse properties live with sanitization
   const parts = cleanVal.split('-');
+  let rawFluid = '', rawSeq = '', rawSize = '', rawClass = '', rawIns = '';
+
   if (parts.length > 0 && parts[0].match(/^\d+$/) && parts.length >= 4) {
-    pdfExtractedData[index]["Line Size (mm)"] = parts[0];
-    pdfExtractedData[index]["Fluid Code"] = parts[1];
-    pdfExtractedData[index]["Sequence No"] = parts[2];
-    pdfExtractedData[index]["Pipe Class"] = parts[3];
-    pdfExtractedData[index]["Insulation"] = parts[4] || '';
+    rawSize = parts[0];
+    rawFluid = parts[1];
+    rawSeq = parts[2];
+    rawClass = parts[3];
+    rawIns = parts[4] || '';
   } else {
-    pdfExtractedData[index]["Fluid Code"]     = parts[0] || '';
-    pdfExtractedData[index]["Sequence No"]    = parts[1] || '';
-    pdfExtractedData[index]["Line Size (mm)"] = parts[2] || '';
-    pdfExtractedData[index]["Pipe Class"]     = parts[3] || '';
-    pdfExtractedData[index]["Insulation"]     = parts[4] || '';
+    rawFluid = parts[0] || '';
+    rawSeq   = parts[1] || '';
+    rawSize  = parts[2] || '';
+    rawClass = parts[3] || '';
+    rawIns   = parts[4] || '';
   }
+
+  // Sanitize live edit values
+  const cleanFluid = rawFluid.replace(/^\d+/, '').trim();
+  const classMatch = rawClass.match(/^([A-Za-z]\d+|[A-Za-z0-9]{2,4})/);
+  const cleanClass = classMatch ? classMatch[1] : rawClass.trim();
+
+  pdfExtractedData[index]["Fluid Code"]     = cleanFluid;
+  pdfExtractedData[index]["Sequence No"]    = rawSeq.trim();
+  pdfExtractedData[index]["Line Size (mm)"] = rawSize.trim();
+  pdfExtractedData[index]["Pipe Class"]     = cleanClass;
+  pdfExtractedData[index]["Insulation"]     = rawIns.trim();
 
   // Update DOM badges dynamically without re-rendering inputs
   const fc = document.getElementById('fc_' + index);
