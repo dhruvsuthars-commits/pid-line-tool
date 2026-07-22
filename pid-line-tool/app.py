@@ -6,6 +6,12 @@ import os
 import json
 import pandas as pd
 from flask import Flask, request, jsonify, send_file, render_template, session
+from dotenv import load_dotenv
+
+# Auto-load environment variables from .env if present
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+
 from pid_segregate import process_file, export_with_mn_configs, merge_multiple_files
 from pid_pdf_ocr import extract_text_and_lines_from_pdf
 from line_philosophy_ai import extract_lines_with_philosophy, preview_philosophy_sample

@@ -5,3 +5,5 @@ gunicorn
 google-cloud-storage
 PyMuPDF
 anthropic
+python-dotenv
+
