@@ -13,6 +13,17 @@ from line_philosophy_ai import extract_lines_with_philosophy, preview_philosophy
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
+# Optional Google Cloud Storage integration
+USE_GCS = os.environ.get("USE_GCS", "").lower() in ("1", "true", "yes")
+GCS_BUCKET = os.environ.get("GCS_BUCKET")
+if USE_GCS and GCS_BUCKET:
+    try:
+        from gcs_utils import upload_file as gcs_upload, download_file as gcs_download, generate_signed_url
+    except Exception:
+        gcs_upload = gcs_download = generate_signed_url = None
+else:
+    gcs_upload = gcs_download = generate_signed_url = None
+
 SCRIPT_DIR      = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_STORE = os.path.join(SCRIPT_DIR, "templates_store")
 OUTPUT_DIR      = os.path.join(SCRIPT_DIR, "output")
@@ -27,16 +38,22 @@ try:
 except Exception:
     pass
 
-# Optional Google Cloud Storage integration
-USE_GCS = os.environ.get("USE_GCS", "").lower() in ("1", "true", "yes")
-GCS_BUCKET = os.environ.get("GCS_BUCKET")
-if USE_GCS and GCS_BUCKET:
-    try:
-        from gcs_utils import upload_file as gcs_upload, download_file as gcs_download, generate_signed_url
-    except Exception:
-        gcs_upload = gcs_download = generate_signed_url = None
-else:
-    gcs_upload = gcs_download = generate_signed_url = None
+PORT            = int(os.environ.get("PORT", 5000))
+MAX_PORT        = int(os.environ.get("PORT_RANGE_END", 5100))
+
+# On Vercel / serverless, write to /tmp directory if read-only filesystem
+if os.environ.get("VERCEL"):
+    OUTPUT_DIR      = "/tmp/output"
+    TEMPLATES_STORE = "/tmp/templates_store"
+    INPUT_DIR       = "/tmp/input_store"
+    TEMPLATE_PATH   = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
+
+try:
+    os.makedirs(OUTPUT_DIR,      exist_ok=True)
+    os.makedirs(TEMPLATES_STORE, exist_ok=True)
+    os.makedirs(INPUT_DIR,       exist_ok=True)
+except Exception:
+    pass
 
 
 # ─────────────────────────────────────────────
