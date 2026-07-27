@@ -46,12 +46,13 @@
     #view-index.active{display:flex;flex-direction:column;min-height:100vh}
 
     /* ── NAV ── */
-    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border)}
-    .nav-logo{display:flex;align-items:center;gap:10px}
-    .logo-mark{width:32px;height:32px;border-radius:8px;background:var(--violet);display:flex;align-items:center;justify-content:center}
-    .logo-mark svg{width:18px;height:18px}
-    .logo-text{font-weight:700;font-size:15px;letter-spacing:-0.3px}
-    .logo-text span{color:var(--violet-l)}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--border)}
+    .nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none}
+    .logo-mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--violet),var(--pink));display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(124,58,237,0.45);transition:all 0.25s ease}
+    .logo-mark:hover{transform:scale(1.08) rotate(3deg);box-shadow:0 0 30px rgba(236,72,153,0.6)}
+    .logo-text{font-weight:800;font-size:18px;letter-spacing:-0.5px;color:var(--text);display:flex;flex-direction:column;line-height:1.1}
+    .logo-text span{color:var(--violet-l);font-weight:700}
+    .logo-sub{font-size:9px;font-family:var(--mono);color:var(--cyan-l);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
     .nav-pill{background:rgba(124,58,237,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-family:var(--mono);color:var(--violet-l);letter-spacing:1px}
 
     /* ── HERO ── */
@@ -239,17 +240,30 @@
 <!-- ══ INDEX ══ -->
 <div id="view-index" class="view active">
   <nav>
-    <div class="nav-logo">
+    <a href="/" class="nav-logo" title="P&ID Segregator Tool">
       <div class="logo-mark">
-        <svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
-          <circle cx="9" cy="9" r="7"/><path d="M5 9h8M9 5v8"/>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6" cy="6" r="3"/>
+          <circle cx="18" cy="18" r="3"/>
+          <path d="M6 9v3a3 3 0 0 0 3 3h6"/>
+          <path d="M18 9V6"/>
+          <circle cx="18" cy="6" r="2" fill="white"/>
         </svg>
       </div>
-      <div class="logo-text">P&amp;ID <span>Segregator</span></div>
-    </div>
+      <div class="logo-text">
+        <div>P&amp;ID <span>SEGREGATOR</span></div>
+        <div class="logo-sub">AI LINE TOOL</div>
+      </div>
+    </a>
     <div style="display:flex; gap:10px; align-items:center">
       <button class="btn-outline" id="tabBtnExtractor" style="border-color:var(--violet-l); color:var(--violet-l)" onclick="switchMainTab('extractor')">⚙ Extraction Tool</button>
       <button class="btn-outline" id="tabBtnPhilosophy" onclick="switchMainTab('philosophy')">🧠 AI Philosophy</button>
+      {% if current_user %}
+      <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.06); padding:5px 12px; border-radius:20px; border:1px solid var(--border2);">
+        <span style="font-size:12px; font-weight:600; color:var(--violet-l);">👤 {{ current_user }}</span>
+        <a href="/logout" style="color:#f87171; text-decoration:none; font-size:11px; margin-left:6px; font-weight:700;" title="Sign Out">Logout 🚪</a>
+      </div>
+      {% endif %}
       <div class="nav-pill">● AUTOCAD &amp; AI PROCESSOR</div>
     </div>
   </nav>

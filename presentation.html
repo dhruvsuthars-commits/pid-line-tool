@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P&ID Line List Tool — Client Pitch Presentation Video</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --accent-teal: #0ea5e9;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        /* Top Navigation Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.85rem 2rem;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-teal);
+            text-decoration: none;
+        }
+
+        .brand i {
+            font-size: 1.4rem;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: var(--accent-teal);
+            color: #000;
+            border-color: var(--accent-teal);
+        }
+
+        .btn-green {
+            background: var(--accent-green);
+            color: #0f172a;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-green:hover {
+            background: #34d399;
+            color: #0f172a;
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
+        }
+
+        .btn-amber {
+            background: var(--accent-amber);
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+        }
+
+        .btn-amber:hover {
+            background: #fbbf24;
+            color: #0f172a;
+        }
+
+        .btn-primary {
+            background: var(--accent-teal);
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        /* Top Video Progress Bar */
+        .video-progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .video-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-teal));
+            transition: width 0.1s linear;
+        }
+
+        /* Presentation Stage */
+        .stage {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 2rem;
+            background: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            transform: scale(0.96) translateX(40px);
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: scale(1) translateX(0);
+            pointer-events: all;
+        }
+
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .category-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-teal);
+            background: rgba(14, 165, 233, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        .slide-title {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-top: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+
+        /* Grid Utilities */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; width: 100%; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; width: 100%; }
+
+        .card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-teal);
+            transform: translateY(-2px);
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(14, 165, 233, 0.1);
+            color: var(--accent-teal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-desc {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Speaker Notes Overlay */
+        .notes-panel {
+            position: absolute;
+            bottom: 5rem;
+            right: 2rem;
+            width: 380px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--accent-teal);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 90;
+            display: none;
+        }
+
+        .notes-panel.active {
+            display: block;
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-teal);
+            margin-bottom: 0.5rem;
+        }
+
+        .notes-content {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Footer Controls */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .dot.active {
+            background: var(--accent-teal);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .code-box {
+            background: #090d16;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <a href="/" class="brand">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span>P&ID Line List Tool</span>
+        </a>
+        <div class="controls">
+            {% if current_user %}
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-teal); background: rgba(255,255,255,0.06); padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                👤 {{ current_user }}
+            </span>
+            <a href="/logout" class="btn" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" title="Sign Out">
+                Logout <i class="fa-solid fa-right-from-bracket"></i>
+            </a>
+            {% endif %}
+            <!-- DOWNLOAD MP4 VIDEO BUTTON -->
+            <a href="/artifacts/pid_line_tool_presentation_video.mp4" download="pid_line_tool_presentation_video.mp4" class="btn btn-green" title="Download Presentation Video in MP4 Format">
+                <i class="fa-solid fa-file-video"></i> Download MP4 Video
+            </a>
+            <!-- DOWNLOAD PPTX PRESENTATION BUTTON -->
+            <a href="/download-pptx" download="PID_Line_Tool_Client_Presentation.pptx" class="btn btn-amber" title="Download PowerPoint Deck (.pptx)">
+                <i class="fa-solid fa-file-powerpoint"></i> Download PPTX Deck
+            </a>
+            <!-- PLAY ANIMATED VIDEO -->
+            <button class="btn btn-primary" id="videoPlayBtn" onclick="toggleVideoMode()">
+                <i class="fa-solid fa-circle-play" id="videoPlayIcon"></i> <span id="videoPlayText">Play Video</span>
+            </button>
+            <button class="btn" id="voiceToggleBtn" onclick="toggleVoiceover()" title="Voiceover & Narration Sound">
+                <i class="fa-solid fa-volume-high" id="voiceIcon"></i> Voice
+            </button>
+            <button class="btn" id="notesBtn" onclick="toggleNotes()">
+                <i class="fa-solid fa-sticky-note"></i> Notes
+            </button>
+            <button class="btn" id="fullscreenBtn" onclick="toggleFullscreen()">
+                <i class="fa-solid fa-expand"></i> Fullscreen
+            </button>
+            <a href="/" class="btn">
+                <i class="fa-solid fa-house"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Top Video Timeline Bar -->
+    <div class="video-progress-bar-container" id="timelineContainer" onclick="scrubTimeline(event)">
+        <div class="video-progress-bar" id="timelineProgressBar"></div>
+    </div>
+
+    <!-- Presentation Stage (8 Slides) -->
+    <div class="stage">
+
+        <!-- Slide 1: Cover -->
+        <div class="slide active">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Next-Gen Engineering Automation</span>
+                    <h1 class="slide-title" style="font-size: 2.8rem; margin-top: 0.5rem;">P&ID Line List Tool</h1>
+                    <p style="color: var(--text-muted); font-size: 1.2rem; margin-top: 0.75rem; max-width: 800px;">
+                        AI-Driven Automated Extraction, Line Naming Philosophy Parsing & Standardized Excel Segregation
+                    </p>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-3" style="margin-top: 1.5rem;">
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="card-title">10x Faster Segregation</div>
+                        <div class="card-desc">Converts multi-day manual line list data entry into an automated process under 2 minutes.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-brain"></i></div>
+                        <div class="card-title">AI Philosophy Engine</div>
+                        <div class="card-desc">Parses ANY custom line-numbering specification (Aramco, Shell, BP, EPC standards) dynamically.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                        <div class="card-title">Direct P&ID PDF OCR</div>
+                        <div class="card-desc">Extracts line tags directly from engineering PDF drawing packages into master Excel templates.</div>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: right;">
+                Enterprise Engineering & EPC Client Presentation
+            </div>
+        </div>
+
+        <!-- Slide 2: Industry Problem -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Market Challenge</span>
+                    <h2 class="slide-title">The Bottleneck in P&ID Line List Management</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div class="card" style="border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
+                        <h3 style="color: #f87171; margin-bottom: 1rem; font-size: 1.2rem;"><i class="fa-solid fa-triangle-exclamation"></i> Traditional Manual Process</h3>
+                        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-xmark" style="color: #f87171; margin-top: 0.2rem;"></i>
+                                <div><strong>Tedious Manual Entry:</strong> Engineers spend 20+ hours reading P&ID drawings and typing line tags.</div>
+                            </li>
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-xmark" style="color: #f87171; margin-top: 0.2rem;"></i>
+                                <div><strong>Inconsistent Line Conventions:</strong> Projects use conflicting line formats (Fluid-Seq-Size vs Size-Fluid-Class).</div>
+                            </li>
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-xmark" style="color: #f87171; margin-top: 0.2rem;"></i>
+                                <div><strong>High Error Rates:</strong> Typographical errors in line size or pipe class trigger expensive downstream piping re-work.</div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+                        <h3 style="color: var(--accent-green); margin-bottom: 1rem; font-size: 1.2rem;"><i class="fa-solid fa-circle-check"></i> Automated Solution</h3>
+                        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-check" style="color: var(--accent-green); margin-top: 0.2rem;"></i>
+                                <div><strong>Instant Automated Parsing:</strong> Segregates Fluid Code, Sequence No, Size, Class & Insulation instantly.</div>
+                            </li>
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-check" style="color: var(--accent-green); margin-top: 0.2rem;"></i>
+                                <div><strong>Universal AI Adaptability:</strong> Simply type plain-English philosophy rules to handle any client standard.</div>
+                            </li>
+                            <li style="display: flex; gap: 0.75rem; font-size: 0.95rem;">
+                                <i class="fa-solid fa-check" style="color: var(--accent-green); margin-top: 0.2rem;"></i>
+                                <div><strong>Standardized Output:</strong> Direct population of official Linelist_reference master templates.</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Core Capabilities -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Platform Overview</span>
+                    <h2 class="slide-title">Core Platform Capabilities</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-4">
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-list-check"></i></div>
+                        <div class="card-title">Excel Line Segregation</div>
+                        <div class="card-desc">Parses raw line strings into structured columns with styled master cell formatting.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-sliders"></i></div>
+                        <div class="card-title">AI Philosophy Profiles</div>
+                        <div class="card-desc">Save, manage, and toggle between Aramco, BP, Shell, or custom project specs.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-eye"></i></div>
+                        <div class="card-title">P&ID Drawing OCR</div>
+                        <div class="card-desc">Extracts line tags directly from vector/raster CAD drawing PDF packages.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="card-title">M&N & Batch Merge</div>
+                        <div class="card-desc">Apply Material & Numbering rules and merge multi-P&ID lists into master documents.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: AI Line Philosophy Engine -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Deep Dive</span>
+                    <h2 class="slide-title">AI Line Philosophy Engine</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-2">
+                    <div>
+                        <h3 style="font-size: 1.25rem; margin-bottom: 0.75rem;">Zero Code Configuration</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5; font-size: 0.9rem;">
+                            Traditional regex software breaks when client line conventions change. Our AI Philosophy Engine lets engineers write plain-English rules or paste client line spec sheets directly into the web app.
+                        </p>
+                        <div class="card" style="margin-bottom: 0.75rem;">
+                            <div style="font-weight: 700; color: var(--accent-teal); margin-bottom: 0.25rem;">Interactive Live Preview</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Test sample line strings against your philosophy before running 100+ page PDF packages.</div>
+                        </div>
+                        <div class="card">
+                            <div style="font-weight: 700; color: var(--accent-green); margin-bottom: 0.25rem;">Local Fallback Protection</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Zero-API key local rule engine guarantees high performance in offline environments.</div>
+                        </div>
+                    </div>
+                    <div class="code-box">
+<span style="color: #64748b;">// Define Philosophy Profile</span>
+<span style="color: #f43f5e;">"Aramco-Standard"</span>: {
+  <span style="color: #38bdf8;">"delimiter"</span>: <span style="color: #a5f3fc;">"-"</span>,
+  <span style="color: #38bdf8;">"rules"</span>: <span style="color: #a5f3fc;">"Fluid Code - Sequence No - Line Size - Pipe Class - Insulation"</span>
+}
+
+<span style="color: #64748b;">// Sample Input Tag</span>
+<span style="color: #facc15;">"HPS-120816-50-A5-H"</span>
+
+<span style="color: #64748b;">// Extracted Structured Output</span>
+{
+  <span style="color: #34d399;">"Fluid Code"</span>: <span style="color: #f8fafc;">"HPS"</span>,
+  <span style="color: #34d399;">"Sequence No"</span>: <span style="color: #f8fafc;">"120816"</span>,
+  <span style="color: #34d399;">"Line Size (mm)"</span>: <span style="color: #f8fafc;">"50"</span>,
+  <span style="color: #34d399;">"Pipe Class"</span>: <span style="color: #f8fafc;">"A5"</span>,
+  <span style="color: #34d399;">"Insulation"</span>: <span style="color: #f8fafc;">"H"</span>
+}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Workflow Step-by-Step -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Workflow</span>
+                    <h2 class="slide-title">5-Step Automated Execution</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-4" style="grid-template-columns: repeat(5, 1fr); gap: 1rem;">
+                    <div class="card" style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-teal); margin-bottom: 0.5rem;">01</div>
+                        <div class="card-title" style="font-size: 0.95rem;">Upload Files</div>
+                        <div class="card-desc" style="font-size: 0.8rem;">Upload raw Excel line list or P&ID PDF drawings.</div>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 0.5rem;">02</div>
+                        <div class="card-title" style="font-size: 0.95rem;">Select Philosophy</div>
+                        <div class="card-desc" style="font-size: 0.8rem;">Pick saved profile or define custom line rules.</div>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-purple); margin-bottom: 0.5rem;">03</div>
+                        <div class="card-title" style="font-size: 0.95rem;">AI Extraction</div>
+                        <div class="card-desc" style="font-size: 0.8rem;">OCR & LLM engine segregates tags instantly.</div>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-green); margin-bottom: 0.5rem;">04</div>
+                        <div class="card-title" style="font-size: 0.95rem;">M&N Rules</div>
+                        <div class="card-desc" style="font-size: 0.8rem;">Configure fluid-specific material parameters.</div>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #f59e0b; margin-bottom: 0.5rem;">05</div>
+                        <div class="card-title" style="font-size: 0.95rem;">Export Master</div>
+                        <div class="card-desc" style="font-size: 0.8rem;">Download populated reference template.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Security & Deployment -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Enterprise Ready</span>
+                    <h2 class="slide-title">Architecture & Security</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-server"></i></div>
+                        <div class="card-title">Flexible Deployment</div>
+                        <div class="card-desc">Supports Docker containers, Google Cloud Run, Vercel Serverless, or local enterprise intranet servers.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                        <div class="card-title">GCS Persistence</div>
+                        <div class="card-desc">Optional Google Cloud Storage integration for secure master template storage and signed URL downloads.</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="card-title">Data Privacy & Security</div>
+                        <div class="card-desc">Session isolation, HTTPS encryption, zero permanent file retention policies, protecting proprietary drawings.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Business Value & ROI -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Business Impact</span>
+                    <h2 class="slide-title">Quantifiable ROI for Clients</h2>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="grid-4">
+                    <div class="card" style="text-align: center; padding: 2rem 1rem;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-teal); margin-bottom: 0.5rem;">95%</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">Time Reduction per Line List</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 2rem 1rem;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-green); margin-bottom: 0.5rem;">100%</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">Client Standard Compliance</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 2rem 1rem;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-purple); margin-bottom: 0.5rem;">0</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">Human Transcription Errors</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 2rem 1rem;">
+                        <div style="font-size: 3rem; font-weight: 800; color: #f59e0b; margin-bottom: 0.5rem;">10x</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">Faster Proposal Turnaround</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Call to Action with Downloads -->
+        <div class="slide">
+            <div class="slide-header">
+                <div>
+                    <span class="category-badge">Next Steps & Downloads</span>
+                    <h2 class="slide-title">Transform Your Piping Engineering Workflow</h2>
+                </div>
+            </div>
+            <div class="slide-body" style="justify-content: center; align-items: center; text-align: center;">
+                <div style="max-width: 850px;">
+                    <div class="card-icon" style="margin: 0 auto 1rem auto; width: 56px; height: 56px; font-size: 1.75rem;">
+                        <i class="fa-solid fa-download"></i>
+                    </div>
+                    <h3 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.75rem;">Download Video & Presentation Assets</h3>
+                    <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.5; margin-bottom: 1.75rem;">
+                        Get full access to the MP4 video animation, PowerPoint presentation slides, and the P&ID Line Tool web app.
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="/artifacts/pid_line_tool_presentation_video.mp4" download="pid_line_tool_presentation_video.mp4" class="btn btn-green" style="padding: 0.8rem 1.6rem; font-size: 1rem;">
+                            <i class="fa-solid fa-file-video"></i> Download MP4 Video
+                        </a>
+                        <a href="/download-pptx" download="PID_Line_Tool_Client_Presentation.pptx" class="btn btn-amber" style="padding: 0.8rem 1.6rem; font-size: 1rem;">
+                            <i class="fa-solid fa-file-powerpoint"></i> Download PowerPoint Deck (.pptx)
+                        </a>
+                        <a href="/artifacts/pid_line_tool_intro.webp" download="pid_line_tool_presentation_video.webp" class="btn" style="padding: 0.8rem 1.6rem; font-size: 1rem;">
+                            <i class="fa-solid fa-file-image"></i> Download WebP Video
+                        </a>
+                        <a href="/" class="btn btn-primary" style="padding: 0.8rem 1.6rem; font-size: 1rem;">
+                            <i class="fa-solid fa-rocket"></i> Launch Web Application
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Speaker Notes Panel -->
+    <div class="notes-panel" id="notesPanel">
+        <div class="notes-header">
+            <span><i class="fa-solid fa-lightbulb"></i> SPEAKER NOTES & VOICE NARRATION</span>
+            <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="toggleNotes()"></i>
+        </div>
+        <div class="notes-content" id="notesContent">
+            Welcome the client. Emphasize that line list preparation is currently one of the biggest manual bottlenecks in EPC engineering proposals.
+        </div>
+    </div>
+
+    <!-- Footer Controls -->
+    <footer>
+        <div class="dots" id="dotsContainer"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="slide-counter" id="slideCounter">Slide 1 of 8</span>
+            <a href="/artifacts/pid_line_tool_presentation_video.mp4" download="pid_line_tool_presentation_video.mp4" class="btn btn-green" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" title="Download MP4 Video">
+                <i class="fa-solid fa-file-video"></i> Download MP4
+            </a>
+            <select id="videoSpeedSelect" onchange="updateVideoSpeed()" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
+                <option value="0.5">0.5x Slow</option>
+                <option value="1" selected>1.0x Normal</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x Fast</option>
+            </select>
+            <button class="btn" onclick="prevSlide()"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+            <button class="btn btn-primary" onclick="nextSlide()">Next <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </footer>
+
+    <!-- Presentation Deck Video Engine Script -->
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const dotsContainer = document.getElementById('dotsContainer');
+        const slideCounter = document.getElementById('slideCounter');
+        const notesContent = document.getElementById('notesContent');
+        const timelineProgressBar = document.getElementById('timelineProgressBar');
+        const videoPlayBtn = document.getElementById('videoPlayBtn');
+        const videoPlayIcon = document.getElementById('videoPlayIcon');
+        const videoPlayText = document.getElementById('videoPlayText');
+
+        let currentSlide = 0;
+        let isVideoPlaying = false;
+        let videoTimer = null;
+        let voiceoverEnabled = true;
+        let playbackSpeed = 1.0;
+        const SLIDE_DURATION = 3500; // 3.5 sec per slide
+
+        const speakerNotes = [
+            "SLIDE 1: Welcome clients. Introduce the P&ID Line List Tool as an enterprise solution built specifically for EPC contractors, process engineers, and plant designers to automate line list segregation.",
+            "SLIDE 2: Highlight client pain points. Manual data entry takes 20+ hours per project, leads to transcription errors in pipe classes and sizes, and causes expensive re-work.",
+            "SLIDE 3: Walk through the 4 core pillars: Excel Segregation, AI Line Philosophy Profiles, PDF Drawing OCR, and M&N Batch Merging.",
+            "SLIDE 4: Emphasize zero-code configuration. Show how easy it is to define plain-English rules for Aramco, BP, Shell, or custom project standards.",
+            "SLIDE 5: Explain the simple 5-step user experience from raw file upload to final standardized Linelist_reference master export.",
+            "SLIDE 6: Reassure client security leads: HTTPS encryption, session isolation, Docker/Cloud Run deployment, and zero permanent data retention option.",
+            "SLIDE 7: Present concrete ROI: 95% time savings, 100% compliance, zero human errors, and 10x faster proposal turnaround.",
+            "SLIDE 8: Invite the client for a live hands-on proof-of-concept using their sample P&ID drawings and custom line philosophy templates."
+        ];
+
+        // Web Audio Synth Chime
+        let audioCtx = null;
+        function playChime(freq = 440) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch(e){}
+        }
+
+        // Voice Narration using SpeechSynthesis
+        function speakNotes(text) {
+            if (!voiceoverEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0 * playbackSpeed;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function initDots() {
+            dotsContainer.innerHTML = '';
+            slides.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = `dot ${idx === 0 ? 'active' : ''}`;
+                dot.onclick = () => goToSlide(idx);
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function updateSlide() {
+            slides.forEach((s, idx) => {
+                s.classList.toggle('active', idx === currentSlide);
+            });
+            document.querySelectorAll('.dot').forEach((d, idx) => {
+                d.classList.toggle('active', idx === currentSlide);
+            });
+            slideCounter.textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
+            notesContent.textContent = speakerNotes[currentSlide] || "";
+            
+            timelineProgressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            playChime(350 + currentSlide * 40);
+            speakNotes(speakerNotes[currentSlide]);
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+            } else {
+                currentSlide = 0; // loop presentation video
+            }
+            updateSlide();
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            updateSlide();
+        }
+
+        function toggleVideoMode() {
+            isVideoPlaying = !isVideoPlaying;
+            if (isVideoPlaying) {
+                videoPlayIcon.className = 'fa-solid fa-circle-pause';
+                videoPlayText.textContent = 'Pause Video';
+                videoTimer = setInterval(nextSlide, SLIDE_DURATION / playbackSpeed);
+            } else {
+                videoPlayIcon.className = 'fa-solid fa-circle-play';
+                videoPlayText.textContent = 'Play Video';
+                clearInterval(videoTimer);
+                window.speechSynthesis && window.speechSynthesis.cancel();
+            }
+        }
+
+        function scrubTimeline(e) {
+            const rect = timelineContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            currentSlide = Math.min(Math.floor(pos * slides.length), slides.length - 1);
+            updateSlide();
+        }
+
+        function updateVideoSpeed() {
+            playbackSpeed = parseFloat(document.getElementById('videoSpeedSelect').value);
+            if (isVideoPlaying) {
+                clearInterval(videoTimer);
+                videoTimer = setInterval(nextSlide, SLIDE_DURATION / playbackSpeed);
+            }
+        }
+
+        function toggleVoiceover() {
+            voiceoverEnabled = !voiceoverEnabled;
+            document.getElementById('voiceIcon').className = voiceoverEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+            if (!voiceoverEnabled) window.speechSynthesis && window.speechSynthesis.cancel();
+        }
+
+        function toggleNotes() {
+            document.getElementById('notesPanel').classList.toggle('active');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') nextSlide();
+            else if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevSlide();
+            else if (e.key === ' ') { e.preventDefault(); toggleVideoMode(); }
+            else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+            else if (e.key === 'n' || e.key === 'N') toggleNotes();
+        });
+
+        // Initialize
+        initDots();
+        updateSlide();
+
+        // Auto-play if opened via /intro-video or ?video=1
+        if (window.location.pathname.includes('intro-video') || window.location.search.includes('video=1')) {
+            setTimeout(toggleVideoMode, 500);
+        }
+    </script>
+</body>
+</html>

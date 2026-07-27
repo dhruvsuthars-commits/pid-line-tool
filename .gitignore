@@ -19,3 +19,5 @@ output/
 philosophies_store/
 templates_store/*.xlsx
 !templates_store/Linelist_reference.xlsx
+
+cookie*.txt

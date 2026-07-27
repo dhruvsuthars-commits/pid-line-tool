@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P&ID Line Tool — Interactive Character Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #070914;
+            --card-bg: rgba(15, 20, 38, 0.85);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --neon-violet: #8b5cf6;
+            --neon-teal: #0ea5e9;
+            --neon-pink: #ec4899;
+            --neon-green: #10b981;
+            --neon-amber: #f59e0b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Starfield & Grid Canvas Background */
+        #bgCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Pulsing Glow Orbs */
+        .glow-orb {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 2;
+            animation: pulseGlow 10s ease-in-out infinite alternate;
+        }
+        .orb-1 { top: -150px; left: -100px; background: radial-gradient(circle, var(--neon-violet), transparent); }
+        .orb-2 { bottom: -150px; right: -100px; background: radial-gradient(circle, var(--neon-pink), transparent); animation-delay: -5s; }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.2; }
+            100% { transform: scale(1.15) translate(30px, 30px); opacity: 0.35; }
+        }
+
+        /* Main Animated Container */
+        .stage-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        /* Left Side: Animated Engineer Character & Speech Bubble */
+        .character-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            animation: walkIn 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes walkIn {
+            0% { opacity: 0; transform: translateX(-100px) scale(0.8); }
+            100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        /* Speech Bubble Pop-up */
+        .speech-bubble {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--neon-teal);
+            border-radius: 20px;
+            padding: 1.1rem 1.25rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(14, 165, 233, 0.3);
+            margin-bottom: 1.25rem;
+            position: relative;
+            max-width: 280px;
+            animation: popBubble 0.5s ease-out 0.8s backwards;
+        }
+
+        @keyframes popBubble {
+            0% { opacity: 0; transform: scale(0.6) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: rgba(15, 23, 42, 0.95) transparent;
+            display: block;
+            width: 0;
+        }
+
+        .speech-text {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .speech-text strong {
+            color: var(--neon-teal);
+        }
+
+        /* SVG Engineer Avatar Illustration */
+        .character-avatar {
+            width: 210px;
+            height: 240px;
+            position: relative;
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .character-avatar:hover {
+            transform: scale(1.05) rotate(2deg);
+        }
+
+        /* Right Side: Sleek Glassmorphism Login Card */
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--card-border);
+            border-radius: 26px;
+            padding: 2.5rem 2.25rem;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75),
+                        0 0 35px rgba(139, 92, 246, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            position: relative;
+            animation: cardFadeIn 0.8s ease-out;
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            inset: -1.5px;
+            border-radius: 27px;
+            padding: 1.5px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), transparent 40%, rgba(14, 165, 233, 0.5));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-title span {
+            background: linear-gradient(135deg, var(--neon-violet), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Action Bar Buttons Grid */
+        .actions-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-action-teal { border-color: rgba(14, 165, 233, 0.4); background: rgba(14, 165, 233, 0.12); color: #38bdf8; }
+        .btn-action-teal:hover { background: rgba(14, 165, 233, 0.25); color: #fff; box-shadow: 0 0 15px rgba(14, 165, 233, 0.3); }
+
+        .btn-action-amber { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+        .btn-action-amber:hover { background: rgba(245, 158, 11, 0.25); color: #fff; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+
+        .btn-action-green { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.12); color: #34d399; }
+        .btn-action-green:hover { background: rgba(16, 185, 129, 0.25); color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+
+        .btn-action-purple { border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.12); color: #a78bfa; }
+        .btn-action-purple:hover { background: rgba(139, 92, 246, 0.25); color: #fff; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+
+        /* Form Inputs */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i.input-icon {
+            position: absolute;
+            left: 1.1rem;
+            color: var(--text-sub);
+            font-size: 1rem;
+            transition: color 0.25s ease;
+        }
+
+        .input-control {
+            width: 100%;
+            background: rgba(9, 12, 25, 0.8);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 0.85rem 1rem 0.85rem 2.85rem;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        .input-control:focus {
+            border-color: var(--neon-violet);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+            background: rgba(9, 12, 25, 0.95);
+        }
+
+        .input-wrapper:focus-within i.input-icon {
+            color: var(--neon-violet);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 1.1rem;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover { color: #fff; }
+
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            padding: 0.95rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, var(--neon-violet), var(--neon-pink));
+            color: #fff;
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+            transition: all 0.25s ease;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(139, 92, 246, 0.6);
+        }
+
+        /* Alert Notification */
+        .alert-box {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #f87171;
+            animation: shakeAlert 0.4s ease;
+        }
+
+        @keyframes shakeAlert {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        /* Modal Overlay & Box */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(7, 9, 20, 0.85);
+            backdrop-filter: blur(14px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: rgba(15, 20, 38, 0.96);
+            border: 1px solid var(--card-border);
+            border-radius: 22px;
+            width: 100%;
+            max-width: 480px;
+            padding: 2.25rem;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8),
+                        0 0 40px rgba(16, 185, 129, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            animation: modalSpring 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalSpring {
+            from { opacity: 0; transform: scale(0.85) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--neon-green);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: #fff; }
+
+        textarea.input-control {
+            resize: vertical;
+            min-height: 85px;
+            padding: 0.8rem 1rem;
+        }
+
+        /* Responsive Breakpoint */
+        @media (max-width: 768px) {
+            .stage-container { grid-template-columns: 1fr; }
+            .character-zone { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Starfield Background Canvas -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Glowing Orbs -->
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Main Interactive Stage Container -->
+    <div class="stage-container">
+
+        <!-- LEFT SIDE: ANIMATED ENGINEER CHARACTER & SPEECH BUBBLE -->
+        <div class="character-zone">
+            <div class="speech-bubble" id="speechBubble">
+                <div class="speech-text" id="speechText">
+                    👋 <strong>Welcome!</strong> I'm Alex, your P&ID Line Tool engineer. Please enter your credentials to unlock the dashboard!
+                </div>
+            </div>
+
+            <!-- SVG Vector Character of Piping Engineer with Helmet & Tablet -->
+            <div class="character-avatar" id="characterAvatar">
+                <svg viewBox="0 0 200 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Body / Safety Vest -->
+                    <path d="M40 180 C40 140, 60 135, 100 135 C140 135, 160 140, 160 180 L165 240 L35 240 Z" fill="#1e293b"/>
+                    <!-- High-Vis Safety Vest Overlay -->
+                    <path d="M55 145 L80 240 L120 240 L145 145 C125 140, 75 140, 55 145 Z" fill="#f59e0b"/>
+                    <!-- Silver Reflective Stripes -->
+                    <rect x="65" y="165" width="70" height="8" rx="2" fill="#e2e8f0"/>
+                    <rect x="70" y="195" width="60" height="8" rx="2" fill="#e2e8f0"/>
+                    <!-- Neck -->
+                    <rect x="88" y="115" width="24" height="25" rx="4" fill="#fca5a5"/>
+                    <!-- Head -->
+                    <ellipse cx="100" cy="90" rx="30" ry="34" fill="#fca5a5"/>
+                    <!-- Eyes / Expression -->
+                    <circle cx="88" cy="88" r="4" fill="#0f172a" id="eyeLeft"/>
+                    <circle cx="112" cy="88" r="4" fill="#0f172a" id="eyeRight"/>
+                    <!-- Smile Mouth -->
+                    <path d="M92 104 Q100 112 108 104" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" fill="none" id="mouthPath"/>
+                    <!-- Goggles / Glasses -->
+                    <rect x="76" y="80" width="22" height="15" rx="4" fill="rgba(14,165,233,0.3)" stroke="#0ea5e9" stroke-width="2"/>
+                    <rect x="102" y="80" width="22" height="15" rx="4" fill="rgba(14,165,233,0.3)" stroke="#0ea5e9" stroke-width="2"/>
+                    <line x1="98" y1="87" x2="102" y2="87" stroke="#0ea5e9" stroke-width="2"/>
+                    <!-- Safety Hardhat Helmet -->
+                    <path d="M60 75 C60 45, 140 45, 140 75 Z" fill="#38bdf8"/>
+                    <rect x="52" y="72" width="96" height="8" rx="3" fill="#0284c7"/>
+                    <!-- Digital Tablet in Hand -->
+                    <rect x="125" y="150" width="50" height="65" rx="6" fill="#0f172a" stroke="#8b5cf6" stroke-width="2.5"/>
+                    <rect x="130" y="158" width="40" height="42" rx="3" fill="#1e1b4b"/>
+                    <line x1="135" y1="168" x2="160" y2="168" stroke="#38bdf8" stroke-width="2"/>
+                    <line x1="135" y1="176" x2="155" y2="176" stroke="#ec4899" stroke-width="2"/>
+                    <line x1="135" y1="184" x2="165" y2="184" stroke="#10b981" stroke-width="2"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: SLEEK GLASSMORPHISM LOGIN CARD -->
+        <div class="login-card">
+            <div class="brand-header">
+                <div class="brand-title">PID <span>LINE TOOL</span></div>
+                <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--neon-teal); background: rgba(14,165,233,0.1); padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid rgba(14,165,233,0.2);">
+                    ● ENTERPRISE SECURE
+                </span>
+            </div>
+
+            <!-- ACTION BUTTONS BAR -->
+            <div class="actions-bar">
+                <a href="/intro-video" class="btn-action btn-action-teal" title="Watch Animated Intro Pitch Deck">
+                    <i class="fa-solid fa-film"></i> 🎬 Pitch Video
+                </a>
+                <button type="button" class="btn-action btn-action-purple" onclick="openRequestModal()" title="Request Tool Access">
+                    <i class="fa-solid fa-paper-plane"></i> 📩 Request Access
+                </button>
+            </div>
+
+            {% if error %}
+            <div class="alert-box">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="/login" method="POST" style="display: flex; flex-direction: column; gap: 1.15rem;" id="loginForm">
+                <input type="hidden" name="next" value="{{ next_url or '' }}">
+
+                <div class="form-group">
+                    <label for="username">Authorized Email</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="username" name="username" class="input-control" placeholder="engineer@organization.com" required autocomplete="username" onfocus="onEmailFocus()" onblur="onInputBlur()">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" class="input-control" placeholder="••••••••" required autocomplete="current-password" onfocus="onPasswordFocus()" onblur="onInputBlur()">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <i class="fa-solid fa-eye toggle-password" id="togglePass" onclick="togglePasswordVisibility()"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnSubmit">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In to Web Tool
+                </button>
+            </form>
+
+            <div style="text-align: center; font-size: 0.775rem; color: var(--text-sub);">
+                P&ID Line Tool © 2026 — Authorized Enterprise Access
+            </div>
+        </div>
+
+    </div>
+
+    <!-- REQUEST ACCESS MODAL POPUP -->
+    <div class="modal-overlay" id="requestModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-envelope-open-text"></i> Request Tool Access</h2>
+                <button class="close-btn" onclick="closeRequestModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-sub); line-height: 1.5;">
+                Submit your details to send an instant access request notification to the <strong>System Administrator</strong>.
+            </p>
+
+            <div id="modalStatus"></div>
+
+            <form id="requestForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                    <label for="reqName">Full Name *</label>
+                    <input type="text" id="reqName" class="input-control" placeholder="e.g. John Doe" required style="padding-left: 1rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="reqEmail">Work / Personal Email *</label>
+                    <input type="email" id="reqEmail" class="input-control" placeholder="e.g. john.doe@company.com" required style="padding-left: 1rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="reqCompany">Organization / EPC Company</label>
+                    <input type="text" id="reqCompany" class="input-control" placeholder="e.g. Aramco / Shell / Technip / EPC Contractor" style="padding-left: 1rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="reqMessage">Intended Use Case / Message</label>
+                    <textarea id="reqMessage" class="input-control" placeholder="Explain your P&ID line list project requirement..."></textarea>
+                </div>
+
+                <button type="button" class="btn-action btn-action-green" onclick="submitAccessRequest()" id="btnSubmitReq" style="padding: 0.85rem; justify-content: center; font-size: 0.95rem;">
+                    <i class="fa-solid fa-paper-plane"></i> Send Request Notification
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Character Animation & Interactive Scripts -->
+    <script>
+        const speechText = document.getElementById('speechText');
+        const mouthPath = document.getElementById('mouthPath');
+
+        function setSpeech(htmlText, happy = true) {
+            speechText.innerHTML = htmlText;
+            mouthPath.setAttribute('d', happy ? "M92 104 Q100 112 108 104" : "M92 108 Q100 102 108 108");
+        }
+
+        function onEmailFocus() {
+            setSpeech("📧 <strong>Great!</strong> Enter your authorized email address above!");
+        }
+
+        function onPasswordFocus() {
+            setSpeech("🔒 <strong>Top secret!</strong> Don't worry, your password is safe with 256-bit encryption!");
+        }
+
+        function onInputBlur() {
+            setSpeech("Ready when you are! Press <strong>Sign In</strong> to open the dashboard.");
+        }
+
+        // Toggle Password Eye
+        function togglePasswordVisibility() {
+            const passInp = document.getElementById('password');
+            const passIcon = document.getElementById('togglePass');
+            if (passInp.type === 'password') {
+                passInp.type = 'text';
+                passIcon.className = 'fa-solid fa-eye-slash toggle-password';
+                setSpeech("👁️ <strong>Password revealed!</strong> Double-check for any typos!");
+            } else {
+                passInp.type = 'password';
+                passIcon.className = 'fa-solid fa-eye toggle-password';
+                setSpeech("🙈 <strong>Hidden again!</strong> Safe and secure.");
+            }
+        }
+
+        // Form Login Submit Animation
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            setSpeech("🚀 <strong>Authenticating...</strong> Verifying credentials and launching dashboard!", true);
+        });
+
+        // Modal Controls
+        function openRequestModal() {
+            document.getElementById('requestModal').classList.add('active');
+            document.getElementById('modalStatus').innerHTML = '';
+            setSpeech("📩 <strong>Access Request:</strong> Submit your details and I'll notify the administrator instantly!");
+        }
+
+        function closeRequestModal() {
+            document.getElementById('requestModal').classList.remove('active');
+            onInputBlur();
+        }
+
+        async function submitAccessRequest() {
+            const name = document.getElementById('reqName').value.trim();
+            const email = document.getElementById('reqEmail').value.trim();
+            const company = document.getElementById('reqCompany').value.trim();
+            const message = document.getElementById('reqMessage').value.trim();
+            const statusEl = document.getElementById('modalStatus');
+            const btn = document.getElementById('btnSubmitReq');
+
+            if (!name || !email) {
+                statusEl.innerHTML = `<div class="alert-box"><i class="fa-solid fa-triangle-exclamation"></i> Please enter your name and email.</div>`;
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sending Notification…`;
+
+            try {
+                const resp = await fetch('/request-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, company, message })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    statusEl.innerHTML = `
+                        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: var(--neon-green); padding: 0.85rem; border-radius: 12px; font-size: 0.85rem; line-height: 1.5;">
+                            <i class="fa-solid fa-circle-check"></i> ${data.message}
+                        </div>
+                    `;
+                    setSpeech("✅ <strong>Request Sent!</strong> The administrator has been notified. Check your email soon!");
+                    document.getElementById('requestForm').reset();
+                    setTimeout(closeRequestModal, 4000);
+                } else {
+                    statusEl.innerHTML = `<div class="alert-box"><i class="fa-solid fa-triangle-exclamation"></i> ${data.error || 'Failed to send request.'}</div>`;
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<div class="alert-box"><i class="fa-solid fa-triangle-exclamation"></i> Network error: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Send Request Notification`;
+            }
+        }
+
+        // Deep Space Canvas Animation
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const particles = [];
+        for (let i = 0; i < 70; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 2 + 1,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4,
+                color: Math.random() > 0.5 ? '#8b5cf6' : '#0ea5e9'
+            });
+        }
+
+        function drawBg() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0) p.x = width; if (p.x > width) p.x = 0;
+                if (p.y < 0) p.y = height; if (p.y > height) p.y = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = 0.4;
+                ctx.fill();
+            });
+            requestAnimationFrame(drawBg);
+        }
+        drawBg();
+    </script>
+</body>
+</html>

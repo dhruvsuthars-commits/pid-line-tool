@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P&ID Line Tool — Presentation Deck Animated Video Showcase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --accent-teal: #0ea5e9;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 45%);
+        }
+
+        /* Top Navigation Header */
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2.5rem;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-teal);
+            text-decoration: none;
+        }
+
+        .brand i {
+            font-size: 1.4rem;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-light);
+        }
+
+        .btn:hover {
+            background: var(--accent-teal);
+            color: #0f172a;
+            border-color: var(--accent-teal);
+        }
+
+        .btn-primary {
+            background: var(--accent-teal);
+            color: #0f172a;
+            font-weight: 600;
+            border: none;
+        }
+
+        /* Main Container */
+        main {
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .hero-title-box {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 9999px;
+            background: rgba(14, 165, 233, 0.12);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            color: var(--accent-teal);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .hero-title-box h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-light);
+        }
+
+        .hero-title-box p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            max-width: 720px;
+        }
+
+        /* Video Player Wrapper */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(14, 165, 233, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        canvas#videoCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #0f172a;
+        }
+
+        /* Video Control Overlay Bar */
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
+            padding: 1.25rem 1.25rem 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 10;
+        }
+
+        /* Timeline Scrub Bar */
+        .timeline-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            background: var(--accent-teal);
+            border-radius: 4px;
+            width: 0%;
+            position: relative;
+        }
+
+        .timeline-handle {
+            position: absolute;
+            right: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-teal);
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .left-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-teal);
+            border: none;
+            color: #0f172a;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.08);
+            background: #fff;
+        }
+
+        .time-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .time-display span {
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .chapter-title {
+            font-weight: 700;
+            color: var(--accent-teal);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            color: var(--text-light);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .speed-selector {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-light);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.775rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Slide Selector Pills (8 Slides) */
+        .chapter-pills {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.4rem;
+        }
+
+        .chapter-pill {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .chapter-pill.active {
+            background: rgba(14, 165, 233, 0.15);
+            border-color: var(--accent-teal);
+            color: var(--accent-teal);
+        }
+
+        .chapter-pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+        }
+
+        /* Media Artifact section */
+        .media-preview-box {
+            background: var(--card-dark);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+            align-items: center;
+        }
+
+        .media-preview-box img {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Footer */
+        footer {
+            width: 100%;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <a href="/presentation" class="brand">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span>P&ID Line List Tool</span>
+        </a>
+        <div class="nav-actions">
+            <a href="/" class="btn"><i class="fa-solid fa-house"></i> Main Dashboard</a>
+            <a href="/presentation" class="btn"><i class="fa-solid fa-sliders"></i> Presentation Deck</a>
+            <button class="btn btn-primary" id="downloadVideoBtn"><i class="fa-solid fa-download"></i> Export Video (MP4/WebM)</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Header -->
+        <div class="hero-title-box">
+            <div class="badge"><i class="fa-solid fa-film"></i> Presentation Deck Video</div>
+            <h1>P&ID Line List Tool Presentation Deck Video</h1>
+            <p>1-to-1 animated video representation of all 8 slides in the client presentation deck.</p>
+        </div>
+
+        <!-- Video Player -->
+        <div class="video-wrapper" id="videoWrapper">
+            <canvas id="videoCanvas" width="1280" height="720"></canvas>
+
+            <!-- Video Controls -->
+            <div class="video-controls">
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="timeline-progress" id="timelineProgress">
+                        <div class="timeline-handle"></div>
+                    </div>
+                </div>
+
+                <div class="controls-row">
+                    <div class="left-controls">
+                        <button class="play-btn" id="playBtn" title="Play/Pause (Space)"><i class="fa-solid fa-play" id="playIcon"></i></button>
+                        <div class="time-display">
+                            <span id="currentTime">00:00</span> / <span id="durationTime">00:24</span>
+                        </div>
+                        <div class="chapter-title" id="chapterTitle">
+                            <i class="fa-solid fa-circle-play"></i> Slide 1: Cover
+                        </div>
+                    </div>
+
+                    <div class="right-controls">
+                        <button class="icon-btn" id="audioToggleBtn" title="Sound Effects & Synth Audio"><i class="fa-solid fa-volume-high" id="audioIcon"></i></button>
+                        <select class="speed-selector" id="speedSelect">
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1.0x Normal</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2.0x Fast</option>
+                        </select>
+                        <button class="icon-btn" id="fullscreenBtn" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Selector Pills (8 Slides matching presentation deck) -->
+        <div class="chapter-pills" id="chapterPills">
+            <button class="chapter-pill active" data-time="0">1. Cover</button>
+            <button class="chapter-pill" data-time="3">2. Market Challenge</button>
+            <button class="chapter-pill" data-time="6">3. Platform Overview</button>
+            <button class="chapter-pill" data-time="9">4. AI Philosophy Engine</button>
+            <button class="chapter-pill" data-time="12">5. 5-Step Workflow</button>
+            <button class="chapter-pill" data-time="15">6. Architecture & Security</button>
+            <button class="chapter-pill" data-time="18">7. Quantifiable ROI</button>
+            <button class="chapter-pill" data-time="21">8. Next Steps</button>
+        </div>
+
+        <!-- Pre-rendered Animated Video Download & Preview Box -->
+        <div class="media-preview-box">
+            <h2><i class="fa-solid fa-circle-check" style="color: var(--accent-green);"></i> Pre-Rendered High-Resolution WebP / GIF Video File</h2>
+            <p>Direct download of the 8-slide animated presentation deck video.</p>
+            <img src="/_artifacts/pid_line_tool_intro.webp" alt="PID Line Tool Presentation Deck Video" onerror="this.src='/_artifacts/pid_line_tool_intro.gif';">
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="/_artifacts/pid_line_tool_intro.webp" download="pid_line_tool_intro.webp" class="btn btn-primary"><i class="fa-solid fa-file-video"></i> Download WebP Video</a>
+                <a href="/_artifacts/pid_line_tool_intro.gif" download="pid_line_tool_intro.gif" class="btn"><i class="fa-solid fa-file-image"></i> Download GIF Video</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>P&ID Line List Tool — Enterprise Engineering & EPC Presentation © 2026</p>
+    </footer>
+
+    <!-- Video Canvas Engine Script (1-to-1 match with presentation.html slides) -->
+    <script>
+        const canvas = document.getElementById('videoCanvas');
+        const ctx = canvas.getContext('2d');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const timelineContainer = document.getElementById('timelineContainer');
+        const timelineProgress = document.getElementById('timelineProgress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationTimeEl = document.getElementById('durationTime');
+        const chapterTitleEl = document.getElementById('chapterTitle');
+        const speedSelect = document.getElementById('speedSelect');
+        const audioToggleBtn = document.getElementById('audioToggleBtn');
+        const audioIcon = document.getElementById('audioIcon');
+        const downloadVideoBtn = document.getElementById('downloadVideoBtn');
+
+        const DURATION = 24; // 8 slides * 3s
+        let currentTime = 0;
+        let isPlaying = false;
+        let playbackSpeed = 1.0;
+        let soundEnabled = true;
+        let lastTimestamp = 0;
+
+        // Audio Synth
+        let audioCtx = null;
+        function playSynthBeep(freq = 440, type = 'sine', duration = 0.15) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        const scenes = [
+            { time: 0, title: "Slide 1: Cover", icon: "fa-circle-play" },
+            { time: 3, title: "Slide 2: Market Challenge", icon: "fa-triangle-exclamation" },
+            { time: 6, title: "Slide 3: Core Platform Capabilities", icon: "fa-list-check" },
+            { time: 9, title: "Slide 4: AI Line Philosophy Engine", icon: "fa-brain" },
+            { time: 12, title: "Slide 5: 5-Step Workflow Execution", icon: "fa-diagram-project" },
+            { time: 15, title: "Slide 6: Architecture & Security", icon: "fa-shield-halved" },
+            { time: 18, title: "Slide 7: Quantifiable ROI for Clients", icon: "fa-chart-line" },
+            { time: 21, title: "Slide 8: Next Steps & Demonstration", icon: "fa-handshake" }
+        ];
+
+        // Draw Canvas Frame matching presentation.html exactly
+        function drawFrame(t) {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Presentation dark background (#0f172a -> #1e293b)
+            const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+            bgGrad.addColorStop(0, '#0f172a');
+            bgGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Header Banner
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(0, 0, w, 60);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(w, 60); ctx.stroke();
+
+            ctx.fillStyle = '#0ea5e9';
+            ctx.font = 'bold 20px Inter';
+            ctx.fillText('P&ID Line List Tool — Client Pitch Presentation', 40, 38);
+
+            const sceneIndex = Math.min(Math.floor(t / 3), 7);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '16px Inter';
+            ctx.fillText(`Slide ${sceneIndex + 1} of 8`, w - 160, 38);
+
+            if (sceneIndex === 0) {
+                // SLIDE 1: COVER
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.12)';
+                ctx.strokeStyle = '#0ea5e9';
+                ctx.beginPath(); ctx.roundRect(60, 90, 320, 30, 15); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 12px Inter';
+                ctx.fillText('NEXT-GEN ENGINEERING AUTOMATION', 80, 110);
+
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 44px Inter';
+                ctx.fillText('P&ID Line List Tool', 60, 175);
+
+                ctx.fillStyle = '#94a3b8'; ctx.font = '20px Inter';
+                ctx.fillText('AI-Driven Automated Extraction, Line Naming Philosophy Parsing', 60, 215);
+                ctx.fillText('& Standardized Excel Segregation', 60, 245);
+
+                const cards = [
+                    { title: "⚡ 10x Faster Segregation", desc: "Converts multi-day manual line list data entry into an automated process under 2 minutes.", color: "#0ea5e9" },
+                    { title: "🤖 AI Philosophy Engine", desc: "Parses ANY custom line-numbering specification (Aramco, Shell, BP, EPC standards) dynamically.", color: "#8b5cf6" },
+                    { title: "📄 Direct P&ID PDF OCR", desc: "Extracts line tags directly from engineering PDF drawing packages into master Excel templates.", color: "#3b82f6" }
+                ];
+                cards.forEach((c, i) => {
+                    const x = 60 + i * 390;
+                    ctx.fillStyle = '#1e293b';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.beginPath(); ctx.roundRect(x, 290, 360, 320, 16); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = c.color; ctx.fillRect(x, 290, 360, 6);
+
+                    ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 22px Inter';
+                    ctx.fillText(c.title, x + 24, 340);
+
+                    ctx.fillStyle = '#94a3b8'; ctx.font = '16px Inter';
+                    ctx.fillText(c.desc.substring(0, 42), x + 24, 385);
+                    ctx.fillText(c.desc.substring(42), x + 24, 415);
+                });
+
+            } else if (sceneIndex === 1) {
+                // SLIDE 2: MARKET CHALLENGE
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+                ctx.strokeStyle = '#ef4444';
+                ctx.beginPath(); ctx.roundRect(60, 90, 200, 30, 15); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#ef4444'; ctx.font = 'bold 12px Inter';
+                ctx.fillText('MARKET CHALLENGE', 85, 110);
+
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('The Bottleneck in P&ID Line List Management', 60, 165);
+
+                // Left
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+                ctx.beginPath(); ctx.roundRect(60, 200, 560, 440, 16); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#f87171'; ctx.font = 'bold 22px Inter';
+                ctx.fillText('⚠️ Traditional Manual Process', 90, 245);
+
+                const mItems = [
+                    "🔴 Tedious Manual Entry: 20+ hours reading P&IDs.",
+                    "🔴 Inconsistent Conventions: Conflicting formats.",
+                    "🔴 High Error Rates: Expensive downstream re-work."
+                ];
+                mItems.forEach((txt, i) => {
+                    ctx.fillStyle = '#f8fafc'; ctx.font = '18px Inter';
+                    ctx.fillText(txt, 90, 310 + i * 80);
+                });
+
+                // Right
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                ctx.beginPath(); ctx.roundRect(660, 200, 560, 440, 16); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#10b981'; ctx.font = 'bold 22px Inter';
+                ctx.fillText('✅ Automated Solution', 690, 245);
+
+                const aItems = [
+                    "🟢 Instant Automated Parsing: Segregates tags instantly.",
+                    "🟢 Universal AI Adaptability: Plain-English rules.",
+                    "🟢 Standardized Output: Population of Linelist_reference."
+                ];
+                aItems.forEach((txt, i) => {
+                    ctx.fillStyle = '#f8fafc'; ctx.font = '18px Inter';
+                    ctx.fillText(txt, 690, 310 + i * 80);
+                });
+
+            } else if (sceneIndex === 2) {
+                // SLIDE 3: PLATFORM OVERVIEW
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('Core Platform Capabilities', 60, 140);
+
+                const p = [
+                    { title: "📊 Excel Segregation", desc: "Parses raw line strings into structured columns." },
+                    { title: "🎛️ AI Philosophy", desc: "Save & toggle Aramco, BP, Shell specs." },
+                    { title: "👁️ P&ID OCR", desc: "Extracts tags directly from PDF packages." },
+                    { title: "📑 Batch Merge", desc: "Apply M&N rules & merge multi-P&ID lists." }
+                ];
+                p.forEach((item, i) => {
+                    const x = 60 + i * 290;
+                    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.beginPath(); ctx.roundRect(x, 200, 260, 420, 16); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 22px Inter';
+                    ctx.fillText(item.title, x + 20, 260);
+                    ctx.fillStyle = '#94a3b8'; ctx.font = '16px Inter';
+                    ctx.fillText(item.desc, x + 20, 310);
+                });
+
+            } else if (sceneIndex === 3) {
+                // SLIDE 4: AI PHILOSOPHY ENGINE
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('AI Line Philosophy Engine', 60, 140);
+
+                // Code Box (Matching slide 4 code snippet)
+                ctx.fillStyle = '#0b0f19'; ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath(); ctx.roundRect(620, 180, 600, 440, 16); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#64748b'; ctx.font = '16px JetBrains Mono';
+                ctx.fillText('// Define Philosophy Profile', 650, 220);
+                ctx.fillStyle = '#f43f5e'; ctx.fillText('"Aramco-Standard": {', 650, 250);
+                ctx.fillStyle = '#38bdf8'; ctx.fillText('  "delimiter": "-",', 650, 280);
+                ctx.fillText('  "rules": "Fluid - Seq - Size - Class - Ins"', 650, 310);
+                ctx.fillStyle = '#f43f5e'; ctx.fillText('}', 650, 340);
+
+                ctx.fillStyle = '#64748b'; ctx.fillText('// Extracted Structured Output', 650, 390);
+                ctx.fillStyle = '#34d399'; ctx.fillText('{ "Fluid": "HPS", "Seq": "120816",', 650, 420);
+                ctx.fillText('  "Size": "50mm", "Class": "A5" }', 650, 450);
+
+                ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 24px Inter';
+                ctx.fillText('Zero Code Configuration', 60, 220);
+                ctx.fillStyle = '#94a3b8'; ctx.font = '18px Inter';
+                ctx.fillText('Write plain-English rules or paste client spec sheets.', 60, 260);
+
+            } else if (sceneIndex === 4) {
+                // SLIDE 5: WORKFLOW
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('5-Step Automated Execution', 60, 140);
+
+                const steps = [
+                    "01 Upload Files", "02 Select Spec", "03 AI Extraction", "04 M&N Rules", "05 Export Master"
+                ];
+                steps.forEach((s, i) => {
+                    const x = 60 + i * 230;
+                    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#0ea5e9';
+                    ctx.beginPath(); ctx.roundRect(x, 220, 210, 360, 16); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 28px Inter';
+                    ctx.fillText(s.substring(0,2), x + 20, 280);
+                    ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 20px Inter';
+                    ctx.fillText(s.substring(3), x + 20, 330);
+                });
+
+            } else if (sceneIndex === 5) {
+                // SLIDE 6: SECURITY & DEPLOYMENT
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('Architecture & Security', 60, 140);
+
+                const secs = [
+                    { title: "🖥️ Flexible Deployment", desc: "Docker containers, Cloud Run, Vercel, or local server." },
+                    { title: "☁️ GCS Persistence", desc: "Secure master template storage & signed URL downloads." },
+                    { title: "🛡️ Data Security", desc: "Session isolation, HTTPS encryption, zero file retention." }
+                ];
+                secs.forEach((item, i) => {
+                    const x = 60 + i * 390;
+                    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.beginPath(); ctx.roundRect(x, 200, 360, 420, 16); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#10b981'; ctx.font = 'bold 22px Inter';
+                    ctx.fillText(item.title, x + 24, 260);
+                    ctx.fillStyle = '#94a3b8'; ctx.font = '16px Inter';
+                    ctx.fillText(item.desc, x + 24, 310);
+                });
+
+            } else if (sceneIndex === 6) {
+                // SLIDE 7: QUANTIFIABLE ROI
+                ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 36px Inter';
+                ctx.fillText('Quantifiable ROI for Clients', 60, 140);
+
+                const stats = [
+                    { val: "95%", label: "Time Reduction per Line List", color: "#0ea5e9" },
+                    { val: "100%", label: "Client Standard Compliance", color: "#10b981" },
+                    { val: "0", label: "Human Transcription Errors", color: "#8b5cf6" },
+                    { val: "10x", label: "Faster Proposal Turnaround", color: "#f59e0b" }
+                ];
+                stats.forEach((st, i) => {
+                    const x = 60 + i * 290;
+                    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = st.color;
+                    ctx.beginPath(); ctx.roundRect(x, 220, 260, 360, 16); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = st.color; ctx.font = 'bold 56px Inter';
+                    ctx.fillText(st.val, x + 30, 320);
+                    ctx.fillStyle = '#f8fafc'; ctx.font = '18px Inter';
+                    ctx.fillText(st.label.substring(0,20), x + 30, 400);
+                    ctx.fillText(st.label.substring(20), x + 30, 430);
+                });
+
+            } else if (sceneIndex === 7) {
+                // SLIDE 8: CALL TO ACTION
+                ctx.save(); ctx.translate(w/2, h/2);
+                ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.roundRect(-420, -180, 840, 360, 20); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#0ea5e9'; ctx.font = 'bold 32px Inter'; ctx.textAlign = 'center';
+                ctx.fillText('Schedule a Live Demonstration', 0, -60);
+                ctx.fillStyle = '#f8fafc'; ctx.font = '20px Inter';
+                ctx.fillText('Demonstrate P&ID Line List Tool live on your proprietary drawings.', 0, 0);
+                ctx.fillStyle = '#0ea5e9'; ctx.fillRect(-180, 60, 360, 60);
+                ctx.fillStyle = '#0f172a'; ctx.font = 'bold 20px Inter';
+                ctx.fillText('🚀 Launch Web Application', 0, 96);
+                ctx.restore();
+            }
+
+            // Footer
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(0, h - 30, w, 30);
+            ctx.fillStyle = '#0ea5e9'; ctx.fillRect(0, h - 4, (t / DURATION) * w, 4);
+            ctx.fillStyle = '#94a3b8'; ctx.font = '14px Inter';
+            ctx.fillText(scenes[sceneIndex].title, 40, h - 10);
+            ctx.fillText(`00:${String(Math.floor(t)).padStart(2,'0')} / 00:${DURATION}`, w - 120, h - 10);
+
+            // Update UI
+            currentTimeEl.textContent = `00:${String(Math.floor(t)).padStart(2,'0')}`;
+            durationTimeEl.textContent = `00:${DURATION}`;
+            timelineProgress.style.width = `${(t / DURATION) * 100}%`;
+            chapterTitleEl.innerHTML = `<i class="fa-solid ${scenes[sceneIndex].icon}"></i> ${scenes[sceneIndex].title}`;
+            document.querySelectorAll('.chapter-pill').forEach((pill, i) => {
+                if (i === sceneIndex) pill.classList.add('active');
+                else pill.classList.remove('active');
+            });
+        }
+
+        function animate(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (isPlaying) {
+                currentTime += delta * playbackSpeed;
+                if (currentTime >= DURATION) currentTime = 0;
+                playSynthBeep(300 + (currentTime % 3) * 50, 'sine', 0.05);
+            }
+            drawFrame(currentTime);
+            requestAnimationFrame(animate);
+        }
+
+        playBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playIcon.className = isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+        });
+
+        timelineContainer.addEventListener('click', (e) => {
+            const rect = timelineContainer.getBoundingClientRect();
+            currentTime = ((e.clientX - rect.left) / rect.width) * DURATION;
+            drawFrame(currentTime);
+        });
+
+        speedSelect.addEventListener('change', (e) => playbackSpeed = parseFloat(e.target.value));
+
+        audioToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            audioIcon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+        });
+
+        document.querySelectorAll('.chapter-pill').forEach((pill) => {
+            pill.addEventListener('click', () => {
+                currentTime = parseFloat(pill.dataset.time);
+                drawFrame(currentTime);
+            });
+        });
+
+        downloadVideoBtn.addEventListener('click', () => {
+            if (!window.MediaRecorder) {
+                alert('MediaRecorder API is not supported in this browser.');
+                return;
+            }
+            alert('Recording 24-second presentation deck video... Please wait.');
+            const stream = canvas.captureStream(30);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'PID_Line_Tool_Presentation_Video.webm';
+                a.click();
+            };
+            currentTime = 0; isPlaying = true; recorder.start();
+            setTimeout(() => { recorder.stop(); isPlaying = false; playIcon.className = 'fa-solid fa-play'; }, DURATION * 1000);
+        });
+
+        drawFrame(0);
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>

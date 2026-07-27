@@ -62,10 +62,50 @@ except Exception:
     pass
 
 
+from functools import wraps
+from flask import redirect, url_for, send_from_directory
+
+DEFAULT_USERNAME = os.environ.get("APP_USER", "dhruvsuthar.ai@gmail.com")
+DEFAULT_PASSWORD = os.environ.get("APP_PASSWORD", "Dvs@2585")
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # ─────────────────────────────────────────────
-# Home
+# Authentication Routes
+# ─────────────────────────────────────────────
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if "user" in session and request.method == "GET" and not request.args.get("force"):
+        return redirect("/")
+    error = None
+    next_url = request.args.get("next") or request.form.get("next") or "/"
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        if username.lower() == DEFAULT_USERNAME.lower() and password == DEFAULT_PASSWORD:
+            session["user"] = username
+            return redirect(next_url)
+        else:
+            error = "Access Denied: Invalid email or password."
+    return render_template("login.html", error=error, next_url=next_url)
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
+
+# ─────────────────────────────────────────────
+# Protected Web Application Routes
 # ─────────────────────────────────────────────
 @app.route("/")
+@login_required
 def index():
     # If using GCS and template is not present locally, try to fetch it
     if USE_GCS and GCS_BUCKET and not os.path.exists(TEMPLATE_PATH):
@@ -73,7 +113,137 @@ def index():
             gcs_download(GCS_BUCKET, "templates/Linelist_reference.xlsx", TEMPLATE_PATH)
         except Exception:
             pass
-    return render_template("index.html", template_loaded=os.path.exists(TEMPLATE_PATH))
+    return render_template("index.html", template_loaded=os.path.exists(TEMPLATE_PATH), current_user=session.get("user"))
+
+
+@app.route("/presentation")
+def presentation():
+    return render_template("presentation.html", current_user=session.get("user"))
+
+
+@app.route("/intro-video")
+def intro_video():
+    return render_template("presentation.html", autoplay_video=True, current_user=session.get("user"))
+
+
+# ─────────────────────────────────────────────
+# Public Access Request & Email Notification
+# ─────────────────────────────────────────────
+NOTIFICATION_EMAIL = "dhruvsuthar.ai@gmail.com"
+ACCESS_REQUESTS_FILE = os.path.join(SCRIPT_DIR, "access_requests.json")
+
+def send_access_notification_email(name, email, company, message):
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port   = int(os.environ.get("SMTP_PORT", 587))
+    smtp_user   = os.environ.get("SMTP_USER", "")
+    smtp_pass   = os.environ.get("SMTP_PASSWORD", "")
+
+    email_body = f"""
+    📩 NEW P&ID LINE TOOL ACCESS REQUEST
+
+    Name: {name}
+    User Email: {email}
+    Company / Org: {company}
+    Timestamp: {pd.Timestamp.now()}
+
+    Message / Use Case:
+    {message}
+
+    ---------------------------------------------------
+    Sent automatically to {NOTIFICATION_EMAIL}
+    """
+    
+    if smtp_user and smtp_pass:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            msg = MIMEMultipart()
+            msg['From'] = smtp_user
+            msg['To'] = NOTIFICATION_EMAIL
+            msg['Subject'] = f"🔔 Access Request: {name} ({company})"
+            msg.attach(MIMEText(email_body, 'plain'))
+
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=5)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+            server.quit()
+            print(f"[SUCCESS] Email notification sent to {NOTIFICATION_EMAIL}")
+            return True
+        except Exception as e:
+            print(f"[WARNING] SMTP send failed: {e}")
+            return False
+    else:
+        print(f"[INFO] Access request logged for {NOTIFICATION_EMAIL}: {name} <{email}> ({company})")
+        return True
+
+
+@app.route("/request-access", methods=["POST"])
+def request_access():
+    try:
+        data = request.get_json(silent=True) or request.form
+        name = data.get("name", "").strip()
+        email = data.get("email", "").strip()
+        company = data.get("company", "").strip()
+        user_message = data.get("message", "").strip()
+
+        if not name or not email:
+            return jsonify({"error": "Name and email address are required."}), 400
+
+        entry = {
+            "id": pd.Timestamp.now().strftime("%Y%m%d%H%M%S"),
+            "name": name,
+            "email": email,
+            "company": company or "N/A",
+            "message": user_message or "N/A",
+            "timestamp": pd.Timestamp.now().isoformat(),
+            "target_notification_email": NOTIFICATION_EMAIL
+        }
+
+        requests_list = []
+        if os.path.exists(ACCESS_REQUESTS_FILE):
+            try:
+                with open(ACCESS_REQUESTS_FILE, "r") as f:
+                    requests_list = json.load(f)
+            except Exception:
+                requests_list = []
+        requests_list.append(entry)
+        with open(ACCESS_REQUESTS_FILE, "w") as f:
+            json.dump(requests_list, f, indent=2)
+
+        send_access_notification_email(name, email, company, user_message)
+
+        return jsonify({
+            "success": True,
+            "message": "Your access request has been sent to the System Administrator! You will receive a response shortly."
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to submit request: {str(e)}"}), 500
+
+
+
+
+@app.route("/artifacts/<path:filename>")
+@app.route("/_artifacts/<path:filename>")
+def serve_artifacts(filename):
+    artifact_dir = "/Users/mac/.gemini/antigravity-ide/brain/00df4d73-003d-43ac-8b17-279b522cfa10"
+    return send_from_directory(artifact_dir, filename)
+
+
+@app.route("/download-pptx")
+@login_required
+def download_pptx():
+    root_dir = os.path.dirname(SCRIPT_DIR)
+    pptx_path = os.path.join(root_dir, "P_and_ID_Line_Tool_Client_Presentation.pptx")
+    if not os.path.exists(pptx_path):
+        pptx_path = os.path.join(SCRIPT_DIR, "P_and_ID_Line_Tool_Client_Presentation.pptx")
+    return send_file(pptx_path, as_attachment=True, download_name="PID_Line_Tool_Client_Presentation.pptx")
+
+
+
+
+
 
 
 # ─────────────────────────────────────────────
