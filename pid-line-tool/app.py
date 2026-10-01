@@ -276,8 +276,15 @@ def upload_template():
 # ─────────────────────────────────────────────
 @app.route("/process", methods=["POST"])
 def process():
-    if "file" not in request.files:
+    files = request.files.getlist("file")
+    if not files:
+        f_single = request.files.get("file")
+        if f_single:
+            files = [f_single]
+    
+    if not files or all(f.filename == "" for f in files):
         return jsonify({"error": "No line list file uploaded"}), 400
+
     # Ensure local template is available (download from GCS if configured)
     if USE_GCS and GCS_BUCKET and not os.path.exists(TEMPLATE_PATH):
         try:
@@ -288,45 +295,56 @@ def process():
     if not os.path.exists(TEMPLATE_PATH):
         return jsonify({"error": "No template found. Please upload Linelist_reference first."}), 400
 
-    f = request.files["file"]
-    if not f.filename.lower().endswith(".xlsx"):
-        return jsonify({"error": "Only .xlsx files are supported"}), 400
+    valid_files = [f for f in files if f.filename and f.filename.lower().endswith((".xlsx", ".xls"))]
+    if not valid_files:
+        return jsonify({"error": "Only .xlsx and .xls files are supported"}), 400
 
-    base_name = os.path.splitext(f.filename)[0]
-    # Keep input file permanently so /export-with-mn can re-use it
-    input_path  = os.path.join(INPUT_DIR,  f"input_{base_name}.xlsx")
-    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_Segregated.xlsx")
+    saved_paths = []
+    for f in valid_files:
+        safe_name = os.path.basename(f.filename)
+        input_path = os.path.join(INPUT_DIR, f"input_{safe_name}")
+        f.save(input_path)
+        saved_paths.append(input_path)
 
-    f.save(input_path)
-
-    # Optionally upload input to GCS
-    if USE_GCS and GCS_BUCKET and gcs_upload:
-        try:
-            gcs_upload(GCS_BUCKET, f"inputs/{os.path.basename(input_path)}", input_path)
-        except Exception:
-            pass
+        if USE_GCS and GCS_BUCKET and gcs_upload:
+            try:
+                gcs_upload(GCS_BUCKET, f"inputs/{os.path.basename(input_path)}", input_path)
+            except Exception:
+                pass
 
     try:
-        df_result = process_file(input_path, TEMPLATE_PATH, output_path)
+        if len(saved_paths) == 1:
+            base_name = os.path.splitext(valid_files[0].filename)[0]
+            output_name = f"{base_name}_Segregated.xlsx"
+            output_path = os.path.join(OUTPUT_DIR, output_name)
+            df_result = process_file(saved_paths[0], TEMPLATE_PATH, output_path)
+            session["input_path"] = saved_paths[0]
+            session["input_paths"] = saved_paths
+            session["output_name"] = output_name
+        else:
+            base_name = f"Combined_{len(saved_paths)}_CAD_Files"
+            output_name = f"{base_name}_Segregated.xlsx"
+            output_path = os.path.join(OUTPUT_DIR, output_name)
+            output_path, total_rows, df_result = merge_multiple_files(saved_paths, TEMPLATE_PATH, output_path, configs=None)
+            session["input_path"] = saved_paths[0]
+            session["input_paths"] = saved_paths
+            session["output_name"] = output_name
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Processing failed: {str(e)}"}), 500
 
     # Store session state
-    session["input_path"]  = input_path
-    session["output_name"] = f"{base_name}_Segregated.xlsx"
-    session["mn_configs"]  = []   # fresh list for this file
+    session["mn_configs"] = []   # fresh list for this file
     session.modified = True
 
-    preview_cols   = ["LINE", "Fluid Code", "Sequence No", "Line Size (mm)", "Pipe Class", "Insulation"]
+    preview_cols = ["Drawing No", "LINE", "Line Size (mm)", "Fluid Code", "Sequence No", "Pipe Class", "Tracing", "Insulation"]
     available_cols = [c for c in preview_cols if c in df_result.columns]
-    preview        = df_result[available_cols].head(50).fillna("").to_dict(orient="records")
+    preview = df_result[available_cols].head(50).fillna("").to_dict(orient="records")
 
-    fluid_codes  = sorted(df_result["Fluid Code"].dropna().unique().tolist())
-    pipe_classes = sorted(df_result["Pipe Class"].dropna().unique().tolist())
+    fluid_codes = sorted(str(x) for x in df_result["Fluid Code"].dropna().unique().tolist() if str(x).strip()) if "Fluid Code" in df_result.columns else []
+    pipe_classes = sorted(str(x) for x in df_result["Pipe Class"].dropna().unique().tolist() if str(x).strip()) if "Pipe Class" in df_result.columns else []
 
-    # Optionally upload output to GCS and return signed URL for download
     download_url = None
     if USE_GCS and GCS_BUCKET and gcs_upload and generate_signed_url:
         try:
@@ -336,14 +354,16 @@ def process():
         except Exception:
             download_url = None
 
+    file_label = valid_files[0].filename if len(valid_files) == 1 else f"{len(valid_files)} CAD Files (Merged)"
     return jsonify({
-        "message":     f"Processed {len(df_result)} rows successfully.",
-        "rows":        len(df_result),
-        "preview":     preview,
+        "message": f"Processed {len(df_result)} rows successfully from {file_label}.",
+        "rows": len(df_result),
+        "preview": preview,
         "fluid_codes": fluid_codes,
-        "pipe_classes":pipe_classes,
+        "pipe_classes": pipe_classes,
         "download_url": download_url,
     })
+
 
 
 # ─────────────────────────────────────────────
@@ -749,7 +769,10 @@ def export_with_mn():
         output_path = os.path.join(OUTPUT_DIR, output_name)
 
         try:
-            export_with_mn_configs(input_path, TEMPLATE_PATH, output_path, configs)
+            if session.get("input_paths") and len(session.get("input_paths", [])) > 1:
+                merge_multiple_files(session["input_paths"], TEMPLATE_PATH, output_path, configs=configs)
+            else:
+                export_with_mn_configs(input_path, TEMPLATE_PATH, output_path, configs)
             if USE_GCS and GCS_BUCKET and gcs_upload:
                 try:
                     gcs_upload(GCS_BUCKET, f"outputs/{os.path.basename(output_path)}", output_path)

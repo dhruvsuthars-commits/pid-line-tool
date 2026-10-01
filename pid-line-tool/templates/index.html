@@ -290,28 +290,36 @@
       </div>
 
       <div class="line-demo">
-        <div class="line-demo-label">Example LINE tag → parsed fields</div>
-        <div class="line-tag" id="demoTag">HPS-120816-50-A5-H</div>
+        <div class="line-demo-label">Example LINE tag → parsed fields (Updated Mapping)</div>
+        <div class="line-tag" id="demoTag">PR-210137-80-MS1-ET-IH</div>
         <div class="line-parts">
           <div>
-            <div class="part p-fluid" id="d-fluid">HPS</div>
-            <div class="part-sub">FLUID CODE</div>
+            <div class="part p-size" id="d-size" style="background:rgba(236,72,153,0.2); border:1px solid var(--pink-l); color:var(--pink-l)">80mm</div>
+            <div class="part-sub">NOM DIA (COL C)</div>
           </div>
           <div>
-            <div class="part p-seq" id="d-seq">120816</div>
-            <div class="part-sub">SEQUENCE NO</div>
+            <div class="part p-fluid" id="d-fluid">PR</div>
+            <div class="part-sub">FLUID CODE (COL D)</div>
           </div>
           <div>
-            <div class="part p-size" id="d-size">50mm</div>
-            <div class="part-sub">LINE SIZE</div>
+            <div class="part p-seq" id="d-seq">210137</div>
+            <div class="part-sub">SEQ NO (COL E)</div>
           </div>
           <div>
-            <div class="part p-class" id="d-class">A5</div>
-            <div class="part-sub">PIPE CLASS</div>
+            <div class="part p-class" id="d-class">MS1</div>
+            <div class="part-sub">PIPE CLASS (COL I)</div>
           </div>
           <div>
-            <div class="part p-ins" id="d-ins">H</div>
-            <div class="part-sub">INSULATION</div>
+            <div class="part" id="d-trace" style="background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.4); color:var(--cyan-l)">ET</div>
+            <div class="part-sub">TRACING (COL T)</div>
+          </div>
+          <div>
+            <div class="part p-ins" id="d-ins">IH</div>
+            <div class="part-sub">INSULATION (COL U)</div>
+          </div>
+          <div>
+            <div class="part" id="d-dwg" style="background:rgba(132,204,22,0.15); border:1px solid rgba(132,204,22,0.35); color:var(--lime-l)">2101_1</div>
+            <div class="part-sub">DRAWING NO (COL B)</div>
           </div>
         </div>
       </div>
@@ -345,16 +353,17 @@
         <div class="ucard-head">
           <div class="step-badge sb-2">02</div>
           <div class="ucard-title">Upload AutoCAD Export</div>
+          <span class="multi-badge" id="multiBadge" style="display:none; margin-left:auto; background:rgba(6,182,212,0.15); color:var(--cyan-l); border:1px solid rgba(6,182,212,0.3); font-family:var(--mono); font-size:10px; padding:3px 9px; border-radius:5px;">MULTIPLE FILES</span>
         </div>
-        <p>Your <code>.xlsx</code> file must contain a <code>LINE</code> column. Format: <code>FluidCode-SeqNo-Size-Class-Insulation</code></p>
+        <p>Select or drop <strong>one or multiple</strong> <code>.xlsx</code> CAD files. Reads sheet <code>LINE NUMBER</code> (or active). All files are segregated and merged into one single workbook.</p>
         <div class="dropzone" id="lineZone" onclick="document.getElementById('lineInp').click()"
           ondragover="onDragOver(event,'lineZone')" ondragleave="onDragLeave('lineZone')"
           ondrop="onDrop(event,'lineInp','lineZone','lineName')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pink-l)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
-          <p class="dz-hint">Drag &amp; drop or click to browse</p>
+          <p class="dz-hint">Drag &amp; drop single or multiple files, or click to browse</p>
           <div class="dz-name" id="lineName">No file selected</div>
         </div>
-        <input type="file" id="lineInp" accept=".xlsx" style="display:none" onchange="onLineSelected(this)"/>
+        <input type="file" id="lineInp" accept=".xlsx,.xls" multiple style="display:none" onchange="onLineSelected(this)"/>
         <div class="card-actions">
           <button class="btn-primary pink" id="btnProcess" disabled onclick="doProcess()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -683,10 +692,24 @@ function onTplSelected(inp){
   if(inp.files.length)document.getElementById('tplName').textContent=inp.files[0].name;
 }
 function onLineSelected(inp){
-  if(inp.files.length){
-    document.getElementById('lineName').textContent=inp.files[0].name;
-    document.getElementById('btnProcess').disabled=false;
+  const files=inp.files;
+  if(!files||files.length===0)return;
+  const nameEl=document.getElementById('lineName');
+  const badgeEl=document.getElementById('multiBadge');
+  if(files.length===1){
+    const f=files[0];
+    nameEl.textContent=f.name+' ('+formatBytes(f.size)+')';
+    if(badgeEl) badgeEl.style.display='none';
+  } else {
+    let totalBytes=0;
+    for(let i=0;i<files.length;i++) totalBytes+=files[i].size;
+    nameEl.innerHTML=`<strong>${files.length} CAD files selected</strong> (${formatBytes(totalBytes)})<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">`+
+      Array.from(files).map(f=>`<span style="background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px; font-size:10px; color:var(--text);">${f.name}</span>`).join('')+
+      `</div>`;
+    if(badgeEl) badgeEl.style.display='inline-block';
   }
+  document.getElementById('btnProcess').disabled=false;
+  document.getElementById('lineStatus').innerHTML='';
 }
 
 function onMultiSelected(inp){
@@ -714,15 +737,18 @@ async function saveTpl(){
 }
 
 async function doProcess(){
-  const f=document.getElementById('lineInp').files[0];
-  if(!f)return;
+  const files=document.getElementById('lineInp').files;
+  if(!files||files.length===0)return;
   document.getElementById('btnProcess').disabled=true;
   document.getElementById('lineStatus').innerHTML='';
-  setProc('UPLOADING','Reading your file…',20);
+  setProc('UPLOADING', files.length > 1 ? `Uploading ${files.length} CAD files…` : 'Reading your file…', 20);
   showView('proc');
-  const fd=new FormData();fd.append('file',f);
+  const fd=new FormData();
+  for(let i=0; i<files.length; i++){
+    fd.append('file', files[i]);
+  }
   try{
-    setTimeout(()=>setProc('PARSING LINES','Splitting LINE tags…',55),600);
+    setTimeout(()=>setProc('PARSING LINES', files.length > 1 ? `Parsing and merging ${files.length} files…` : 'Splitting LINE tags…', 55), 600);
     const r=await fetch('/process',{method:'POST',body:fd});
     setProc('WRITING TEMPLATE','Injecting data into template…',85);
     if(!r.ok){
@@ -1202,7 +1228,7 @@ function buildBars(elId,col){
     </div>`).join('');
 }
 
-const chipMap={'Fluid Code':'chip-v','Pipe Class':'chip-c','Line Size (mm)':'chip-p','Insulation':'chip-a'};
+const chipMap={'Fluid Code':'chip-v','Pipe Class':'chip-c','Line Size (mm)':'chip-p','Tracing':'chip-g','Insulation':'chip-a','Drawing No':'chip-c'};
 function buildTable(rows){
   if(!rows.length)return;
   const cols=Object.keys(rows[0]);
