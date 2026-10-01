@@ -35,6 +35,19 @@ TEMPLATES_STORE = os.path.join(SCRIPT_DIR, "templates_store")
 OUTPUT_DIR      = os.path.join(SCRIPT_DIR, "output")
 INPUT_DIR       = os.path.join(SCRIPT_DIR, "input_store")
 TEMPLATE_PATH   = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
+def get_active_template_path():
+    """Resolve active Linelist_reference template with fallback to bundled versions."""
+    uploaded = os.path.join(TEMPLATES_STORE, "Linelist_reference.xlsx")
+    if os.path.exists(uploaded):
+        return uploaded
+    bundled = os.path.join(SCRIPT_DIR, "templates_store", "Linelist_reference.xlsx")
+    if os.path.exists(bundled):
+        return bundled
+    root_tpl = os.path.join(os.path.dirname(SCRIPT_DIR), "templates_store", "Linelist_reference.xlsx")
+    if os.path.exists(root_tpl):
+        return root_tpl
+    return uploaded
+
 
 PHILOSOPHIES_STORE = os.path.join(SCRIPT_DIR, "philosophies_store")
 if os.environ.get("VERCEL"):
@@ -285,14 +298,16 @@ def process():
     if not files or all(f.filename == "" for f in files):
         return jsonify({"error": "No line list file uploaded"}), 400
 
+    active_template = get_active_template_path()
     # Ensure local template is available (download from GCS if configured)
-    if USE_GCS and GCS_BUCKET and not os.path.exists(TEMPLATE_PATH):
+    if USE_GCS and GCS_BUCKET and not os.path.exists(active_template):
         try:
-            gcs_download(GCS_BUCKET, "templates/Linelist_reference.xlsx", TEMPLATE_PATH)
+            gcs_download(GCS_BUCKET, "templates/Linelist_reference.xlsx", active_template)
         except Exception:
             pass
 
-    if not os.path.exists(TEMPLATE_PATH):
+    active_template = get_active_template_path()
+    if not os.path.exists(active_template):
         return jsonify({"error": "No template found. Please upload Linelist_reference first."}), 400
 
     valid_files = [f for f in files if f.filename and f.filename.lower().endswith((".xlsx", ".xls"))]
@@ -317,7 +332,7 @@ def process():
             base_name = os.path.splitext(valid_files[0].filename)[0]
             output_name = f"{base_name}_Segregated.xlsx"
             output_path = os.path.join(OUTPUT_DIR, output_name)
-            df_result = process_file(saved_paths[0], TEMPLATE_PATH, output_path)
+            df_result = process_file(saved_paths[0], active_template, output_path)
             session["input_path"] = saved_paths[0]
             session["input_paths"] = saved_paths
             session["output_name"] = output_name
@@ -325,7 +340,7 @@ def process():
             base_name = f"Combined_{len(saved_paths)}_CAD_Files"
             output_name = f"{base_name}_Segregated.xlsx"
             output_path = os.path.join(OUTPUT_DIR, output_name)
-            output_path, total_rows, df_result = merge_multiple_files(saved_paths, TEMPLATE_PATH, output_path, configs=None)
+            output_path, total_rows, df_result = merge_multiple_files(saved_paths, active_template, output_path, configs=None)
             session["input_path"] = saved_paths[0]
             session["input_paths"] = saved_paths
             session["output_name"] = output_name
@@ -335,7 +350,7 @@ def process():
         return jsonify({"error": f"Processing failed: {str(e)}"}), 500
 
     # Store session state
-    session["mn_configs"] = []   # fresh list for this file
+    session["mn_configs"] = []
     session.modified = True
 
     preview_cols = ["Drawing No", "LINE", "Line Size (mm)", "Fluid Code", "Sequence No", "Pipe Class", "Tracing", "Insulation"]
@@ -365,10 +380,6 @@ def process():
     })
 
 
-
-# ─────────────────────────────────────────────
-# Philosophy Management & Preview Routes
-# ─────────────────────────────────────────────
 @app.route("/save-philosophy", methods=["POST"])
 def save_philosophy():
     data = request.get_json() or {}
@@ -741,7 +752,7 @@ def export_with_mn():
         if not all(os.path.exists(p) for p in input_paths):
             return jsonify({"error": "Original input files not found. Please re-upload your line lists."}), 400
         
-        if not os.path.exists(TEMPLATE_PATH):
+        if not os.path.exists(get_active_template_path()):
             return jsonify({"error": "Template not found. Please upload Linelist_reference template."}), 400
 
         output_name = session.get("output_name", "Merged_Output.xlsx")
@@ -769,10 +780,11 @@ def export_with_mn():
         output_path = os.path.join(OUTPUT_DIR, output_name)
 
         try:
+            active_tpl = get_active_template_path()
             if session.get("input_paths") and len(session.get("input_paths", [])) > 1:
-                merge_multiple_files(session["input_paths"], TEMPLATE_PATH, output_path, configs=configs)
+                merge_multiple_files(session["input_paths"], active_tpl, output_path, configs=configs)
             else:
-                export_with_mn_configs(input_path, TEMPLATE_PATH, output_path, configs)
+                export_with_mn_configs(input_path, active_tpl, output_path, configs)
             if USE_GCS and GCS_BUCKET and gcs_upload:
                 try:
                     gcs_upload(GCS_BUCKET, f"outputs/{os.path.basename(output_path)}", output_path)
@@ -833,3 +845,16 @@ if __name__ == "__main__":
         print(f"Port {PORT} is in use. Starting server on available port {port} instead.")
 
     app.run(debug=False, host="0.0.0.0", port=port)
+
+
+@app.errorhandler(404)
+def handle_404(e):
+    if request.path.startswith("/api/index") or request.environ.get("PATH_INFO", "").startswith("/api/index"):
+        return redirect(url_for("login"))
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({
+            "error": "Not Found",
+            "path": request.path,
+            "environ_PATH_INFO": request.environ.get("PATH_INFO"),
+        }), 404
+    return redirect(url_for("login"))
